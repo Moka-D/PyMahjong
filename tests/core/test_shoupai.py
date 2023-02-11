@@ -1,5 +1,5 @@
 import pytest
-from jongpy.core.shoupai import Shoupai
+from jongpy import Shoupai
 
 
 class TestShoupai:
@@ -21,14 +21,14 @@ class TestShoupai:
         shoupai = Shoupai.from_string('m055z77,m78-9,z5555,z666=,')
         assert shoupai._zimo == 'z666='
         assert shoupai._fulou == ['m78-9', 'z5555', 'z666=']
-        assert not shoupai._lizhi
+        assert not shoupai.lizhi
 
     def test_zimo(self):
         shoupai = Shoupai.from_string('m55z77,m78-9,z5555,z666=')
         shoupai.zimo('m0')
         assert shoupai._zimo == 'm0'
         assert shoupai._fulou == ['m78-9', 'z5555', 'z666=']
-        assert not shoupai._lizhi
+        assert not shoupai.lizhi
 
     def test_get_dapai(self):
         shoupai1 = Shoupai.from_string('m1550m1,s888-,p2-34,z111=')
