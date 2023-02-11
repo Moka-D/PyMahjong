@@ -1,6 +1,6 @@
 import pytest
-from jongpy import xiangting
-from jongpy import Shoupai
+from jongpy.core.xiangting import xiangting
+from jongpy.core.shoupai import Shoupai
 
 
 class TestXiangting:

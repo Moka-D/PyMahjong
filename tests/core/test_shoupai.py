@@ -1,5 +1,5 @@
 import pytest
-from jongpy import Shoupai
+from jongpy.core.shoupai import Shoupai
 
 
 class TestShoupai:

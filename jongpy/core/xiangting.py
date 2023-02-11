@@ -1,7 +1,6 @@
-"""jongpy.Util"""
+"""jongpy.core.xiangting"""
 
-from jongpy import Shoupai
-from typing import Any
+from jongpy.core.shoupai import Shoupai
 
 
 XIANGTING_INF = 999
