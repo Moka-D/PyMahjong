@@ -2,13 +2,12 @@
 
 import re
 import copy
-from typing import Any
 
 
 class Shoupai:
     """手牌クラス"""
 
-    _bingpai: dict[str, Any]
+    _bingpai: dict[str, int | list[int]]
     _fulou: list[str]
     _zimo: str | None
     _lizhi: bool
@@ -689,7 +688,7 @@ class Shoupai:
             # ツモの直後以外は暗槓・加槓できないので None を返す
             if not self._zimo:
                 return None
-            if len(self._zimo) >2:
+            if len(self._zimo) > 2:
                 return None
 
             p = self._zimo.replace('0', '5')

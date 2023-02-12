@@ -218,7 +218,7 @@ def xiangting_yiban(shoupai: Shoupai):
     """
 
     # 雀頭なしとした場合のシャンテン数を計算する
-    x_min = mianzi_all(shoupai, False)
+    x_min = mianzi_all(shoupai)
 
     # 可能な雀頭を抜き取り、雀頭ありの場合のシャンテン数を計算する
     for s in ['m', 'p', 's', 'z']:
@@ -238,7 +238,7 @@ def xiangting_yiban(shoupai: Shoupai):
     return x_min
 
 
-def mianzi_all(shoupai: Shoupai, jiangpai: bool):
+def mianzi_all(shoupai: Shoupai, jiangpai: bool = False):
 
     # 各色ごとの面子・搭子・孤立牌数をカウントする
     r = {
