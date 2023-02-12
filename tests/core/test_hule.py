@@ -1,6 +1,10 @@
 import pytest
 from jongpy.core.shoupai import Shoupai
-from jongpy.core.hule import hule_mianzi, hule_mianzi_jiulian
+from jongpy.core.hule import (
+    hule_mianzi,
+    hule_mianzi_jiulian,
+    get_hudi
+)
 
 
 class TestHule:
@@ -57,4 +61,36 @@ class TestHule:
         shoupai = Shoupai.from_string('m1112345678999m1')
         expected = [['m11123456789991_!']]
         actual = hule_mianzi_jiulian(shoupai, 'm1_')
+        assert actual == expected
+
+    def test_get_fu(self):
+        shoupai = Shoupai.from_string('m12p456z11777m3,z555+')
+        mianzi = hule_mianzi(shoupai)
+        actual = get_hudi(mianzi[0], 0, 0)
+        expected = {
+            'fu': 40,
+            'menqian': False,
+            'zimo': True,
+            'shunzi': {
+                'm': [0, 1, 0, 0, 0, 0, 0, 0],
+                'p': [0, 0, 0, 0, 1, 0, 0, 0],
+                's': [0, 0, 0, 0, 0, 0, 0, 0]
+            },
+            'kezi': {
+                'm': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                'p': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                's': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                'z': [0, 0, 0, 0, 0, 1, 0, 1]
+            },
+            'n_shunzi': 2,
+            'n_kezi': 2,
+            'n_ankezi': 1,
+            'n_gangzi': 0,
+            'n_yaojiu': 4,
+            'n_zipai': 3,
+            'danqi': False,
+            'pinghu': False,
+            'zhuangfeng': 0,
+            'menfeng': 0
+        }
         assert actual == expected

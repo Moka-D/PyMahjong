@@ -2,6 +2,7 @@
 
 import re
 import copy
+import math
 from jongpy.core.shoupai import Shoupai
 from jongpy.core.shan import Shan
 
@@ -262,8 +263,128 @@ def get_post_hupai(shoupai: Shoupai, rongpai: str, baopai, fubaopai) -> list[dic
     return post_hupai
 
 
-def get_hudi():
-    pass
+def get_hudi(mianzi: list[str], zhuangfeng: int, menfeng: int) -> dict[str, int | bool | dict[str, list[int]]]:
+    """和了形の符を計算する"""
+
+    # パターンマッチ用の正規表現
+    zhuangfengpai = re.compile(f'^z{zhuangfeng+1}.*$')  # 場風
+    menfengpai = re.compile(f'^z{menfeng+1}.*$')    # 自風
+    sanyuanpai = re.compile('^z[567].*$')   # 三元牌
+
+    yaojiu = re.compile('^.*[z19].*$')  # ヤオ九牌
+    zipai = re.compile('^z.*$')     # 字牌
+
+    kezi = re.compile(r'^[mpsz](\d)\1\1.*$')    # 刻子
+    ankezi = re.compile(r'^[mpsz](\d)\1\1(?:\1|_\!)?$')     # 暗刻
+    gangzi = re.compile(r'^[mpsz](\d)\1\1.*\1.*$')  # 槓子
+
+    danqi = re.compile(r'^[mpsz](\d)\1[\+\=\-\_]\!$')   # 単騎待ち
+    kanzhang = re.compile(r'^[mps]\d\d[\+\=\-\_]\!\d$')     # 嵌張待ち
+    bianzhang = re.compile(r'^[mps](123[\+\=\-\_]\!|7[\+\=\-\_]\!89)$')     # 辺張待ち
+
+    # 面子構成情報の初期値
+    hudi = {
+        'fu': 20,   # 符
+        'menqian': True,    # 面前のとき True
+        'zimo': True,   # ツモ和了のとき True
+        'shunzi': {     # 順子の構成情報
+            'm': [0, 0, 0, 0, 0, 0, 0, 0],
+            'p': [0, 0, 0, 0, 0, 0, 0, 0],
+            's': [0, 0, 0, 0, 0, 0, 0, 0]
+        },
+        'kezi': {   # 刻子の構成情報
+            'm': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            'p': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            's': [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            'z': [0, 0, 0, 0, 0, 0, 0, 0]
+        },
+        'n_shunzi': 0,  # 順子の数
+        'n_kezi': 0,    # 刻子の数
+        'n_ankezi': 0,  # 暗刻の数
+        'n_gangzi': 0,  # 槓子の数
+        'n_yaojiu': 0,  # ヤオ九牌を含むブロックの数
+        'n_zipai': 0,   # 字牌を含むブロックの数
+        'danqi': False,     # 単騎待ちのとき True
+        'pinghu': False,    # 平和のとき True
+        'zhuangfeng': zhuangfeng,   # 場風 (0:東, 1:南, 2:西, 3:北)
+        'menfeng': menfeng  # 自風 (0:東, 1:南, 2:西, 3:北)
+    }
+
+    # 和了形の各ブロックについて処理を行う
+    for m in mianzi:
+
+        if re.search(r'[\+\=\-](?!\!)', m):
+            hudi['menqian'] = False     # 副露している場合 False に変更
+        if re.search(r'[\+\=\-]\!', m):
+            hudi['zimo'] = False    # ロン和了の場合 False に変更
+
+        if len(mianzi) == 1:    # 九牌宝燈の場合、以下は処理しない
+            continue
+
+        if re.search(danqi, m):
+            hudi['danqi'] = True    # 単騎待ちの場合 True
+
+        if len(mianzi) == 13:   # 国士無双の場合、以下は処理しない
+            continue
+
+        if re.search(yaojiu, m):
+            hudi['n_yaojiu'] += 1   # ヤオ九牌を含むブロック数を加算
+        if re.search(zipai, m):
+            hudi['n_zipai'] += 1    # 字牌を含むブロック数を加算
+
+        if len(mianzi) != 5:    # 七対子の場合、以下は処理しない
+            continue
+
+        if m == mianzi[0]:  # 雀頭の処理
+            fu = 0  # 雀頭の符を 0 で初期化
+            if re.search(zhuangfengpai, m):
+                fu += 2     # 場風の場合、2符加算
+            if re.search(menfengpai, m):
+                fu += 2     # 自風の場合、2符加算
+            if re.search(sanyuanpai, m):
+                fu += 2     # 三元牌の場合、2符加算
+            hudi['fu'] += fu    # 雀頭の符を加算
+            if hudi['danqi']:
+                hudi['fu'] += 2     # 単騎待ちの場合、2符加算
+
+        elif re.search(kezi, m):    # 刻子の処理
+            hudi['n_kezi'] += 1     # 刻子の数を加算
+            fu = 2  # 刻子の符を 2 で初期化
+            if re.search(yaojiu, m):
+                fu *= 2     # ヤオ九牌の場合、符を2倍にする
+            if re.search(ankezi, m):
+                fu *= 2     # 暗刻の場合、符を2倍にする
+                hudi['n_ankezi'] += 1
+            if re.search(gangzi, m):
+                fu *= 4     # 槓子の場合、符を4倍にする
+                hudi['n_gangzi'] += 1
+            hudi['fu'] += fu    # 刻子の符を加算
+            hudi['kezi'][m[0]][int(m[1])] += 1   # 刻子の構成情報に追加
+
+        else:   # 順子の処理
+            hudi['n_shunzi'] += 1   # 順子の数を加算
+            if re.search(kanzhang, m):
+                hudi['fu'] += 2     # 辺張待ちの場合、2符加算
+            if re.search(bianzhang, m):
+                hudi['fu'] += 2     # 嵌張待ちの場合、2符加算
+            hudi['shunzi'][m[0]][int(m[1])] += 1     # 順子の構成情報に追加
+
+    # 和了全体に関する加符を行う
+    if len(mianzi) == 7:    # 七対子の場合
+        hudi['fu'] = 25     # 副底は25符固定
+    elif len(mianzi) == 5:  # 一般形の場合
+        hudi['pinghu'] = hudi['menqian'] and (hudi['fu'] == 20)     # 符のない面前手は平和
+        if hudi['zimo']:    # ツモ和了
+            if not hudi['pinghu']:
+                hudi['fu'] += 2     # 平和でなければ、2符加算
+        else:   # ロン和了
+            if hudi['menqian']:
+                hudi['fu'] += 10    # 面前なら、10符加算
+            elif hudi['fu'] == 20:
+                hudi['fu'] = 30     # 符のない副露手は、30符固定
+        hudi['fu'] = math.ceil(hudi['fu'] / 10) * 10    # 10符未満を切り上げる
+
+    return hudi
 
 
 def get_hupai():
@@ -344,8 +465,8 @@ def add_hulepai(mianzi: list[str], p: str) -> list[list[str]]:
     """和了牌のマークを付ける"""
 
     s, n, d = p[:]
-    regexp = re.compile('^({}.*{})'.format(s, n))   # 和了牌を探す正規表現
-    replacer = '\\1{}!'.format(d)   # マークを付ける置換文字列
+    regexp = re.compile(f'^({s}.*{n})')     # 和了牌を探す正規表現
+    replacer = f'\\1{d}!'   # マークを付ける置換文字列
 
     new_mianzi = []
 
