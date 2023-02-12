@@ -151,7 +151,8 @@ class Shoupai:
         elif re.fullmatch(r'[mpsz](\d)\1\1\1[\+\=\-]?', h):   # 暗槓か大明槓の場合
             # 鳴いた牌以外の順序を0が後ろになるように並び変える
             m_tail = re.search(r'\d[\+\=\-]$', m)
-            return m[0] + ''.join(sorted(re.findall(r'\d(?![\+\=\-])', m), reverse=True)) + (m_tail.group() if m_tail else '')
+            return (m[0] + ''.join(sorted(re.findall(r'\d(?![\+\=\-])', m), reverse=True)) +
+                    (m_tail.group() if m_tail else ''))
 
         elif re.fullmatch(r'[mps]\d+\-\d*', h):     # それ以外は順子とみなす
             # まず順子として正しいかチェック
