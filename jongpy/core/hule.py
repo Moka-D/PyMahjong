@@ -3,7 +3,7 @@
 import re
 import copy
 import math
-from functools import reduce
+from typing import Any
 from jongpy.core.shoupai import Shoupai
 from jongpy.core.shan import Shan
 
@@ -31,18 +31,18 @@ def hule(shoupai: Shoupai, rongpai: str, param: dict):
         hudi = get_hudi(mianzi, param['zhuangfeng'], param['mengfeng'])
 
         # 和了形を判定する
-        hupaio = get_hupai(mianzi, hudi, pre_hupai, post_hupai, param['rule'])
+        hupai = get_hupai(mianzi, hudi, pre_hupai, post_hupai, param['rule'])
 
         # 和了点を計算する
-        rv = get_defen(mianzi, hudi, rongpai, param)
+        rv = get_defen(hudi['fu'], hupai, rongpai, param)
 
         # 最も和了点の高い和了形を選択する。
         # 和了点が同じ場合は、より翻数の多い方を(役満があればそれを)
         # 翻数も同じ場合はより符の高い方を選択する
-        if (not max or (rv['defen'] > h_max['defen']) or (rv['defen'] == h_max['defen']) and
+        if (not h_max or (rv['defen'] > h_max['defen']) or (rv['defen'] == h_max['defen']) and
                 (not rv['defen'] or (rv['fanshu'] > h_max['fanshu']) or
                  (rv['fanshu'] == h_max['fanshu']) and (rv['fu'] > h_max['fu']))):
-            max = rv
+            h_max = rv
 
     return h_max
 
@@ -393,256 +393,29 @@ def get_hupai(
     mianzi: list[str],
     hudi: dict[str, int | bool | dict[str, list[int]]],
     pre_hupai: list[dict[str, str | int]],
-    post_hupai,
-    rule
-):
+    post_hupai: list[dict[str, str | int]],
+    rule: dict[str, Any]
+) -> list[dict[str, str | int]]:
     """和了役を判定する"""
-
-    # 通常役
-    def menqianging():
-        """面前ツモ"""
-        if hudi['menqian'] and hudi['zimo']:
-            return [{'name': '面前清自摸和', 'fanshu': 1}]
-        return []
-
-    def fanpai():
-        """翻牌"""
-        feng_hanzi = ['東', '南', '西', '北']
-        fanpai_all = []
-        if hudi['kezi']['z'][hudi['zhuangfeng']+1]:
-            fanpai_all.append({'name': '場風 '+feng_hanzi[hudi['zhuangfeng']],
-                               'fanshu': 1})
-        if hudi['kezi']['z'][hudi['menqian']+1]:
-            fanpai_all.append({'name': '自風 '+feng_hanzi[hudi['menfeng']],
-                               'fanshu': 1})
-        if hudi['kezi']['z'][5]:
-            fanpai_all.append({'name': '翻牌 白', 'fanshu': 1})
-        if hudi['kezi']['z'][6]:
-            fanpai_all.append({'name': '翻牌 發', 'fanshu': 1})
-        if hudi['kezi']['z'][7]:
-            fanpai_all.append({'name': '翻牌 中', 'fanshu': 1})
-        return fanpai_all
-
-    def pinghu():
-        """平和"""
-        if hudi['pinghu']:
-            return [{'name': '平和', 'fanshu': 1}]
-        return []
-
-    def duanyaojiu():
-        """タンヤオ"""
-        if hudi['n_yaojiu'] > 0:
-            return []
-        # 喰いタンありの場合、副露していても成立
-        if rule['fulou_duanyaojiu'] or hudi['menqian']:
-            return [{'name': '断ヤオ九', 'fanshu': 1}]
-        return []
-
-    def yibeikou():
-        """一盃口"""
-        if not hudi['menqian']:
-            return []
-        shunzi = hudi['shunzi']
-        beiko = reduce(lambda a, b: a + b, list(map(lambda x: x >> 1, shunzi['m'] + shunzi['p'] + shunzi['s'])))
-        if beiko == 1:
-            return [{'name': '一盃口', 'fanshu': 1}]
-        return []
-
-    def sansetongshun():
-        """三色同順"""
-        shunzi = hudi['shunzi']
-        for n in range(1, 8):
-            if shunzi['m'][n] and shunzi['p'][n] and shunzi['s'][n]:
-                return [{'name': '三色同順', 'fanshu': (2 if hudi['menqian'] else 1)}]
-        return []
-
-    def yiqitongguan():
-        """一気通貫"""
-        shunzi = hudi['shunzi']
-        for s in ['m', 'p', 's']:
-            if shunzi[s][1] and shunzi[s][4] and shunzi[s][7]:
-                return [{'name': '一気通貫', 'fanshu': (2 if hudi['menqian'] else 1)}]
-        return []
-
-    def hunquandaiyaojiu():
-        """チャンタ"""
-        if (hudi['n_yaojiu'] == 5) and (hudi['n_shunzi'] > 0) and (hudi['n_zipai'] > 0):
-            return [{'name': '混全帯ヤオ九', 'fanshu': (2 if hudi['menqian'] else 1)}]
-        return []
-
-    def qiduizi():
-        """七対子"""
-        if len(mianzi) == 7:
-            return [{'name': '七対子', 'fanshu': 2}]
-        return []
-
-    def duiduihu():
-        """対々和"""
-        if hudi['n_kezi'] == 4:
-            return [{'name': '対々和', 'fanshu': 2}]
-        return []
-
-    def sananke():
-        """三暗刻"""
-        if hudi['n_ankezi'] == 3:
-            return [{'name': '三暗刻', 'fanshu': 2}]
-        return []
-
-    def sangangzi():
-        """三槓子"""
-        if hudi['n_gangzi'] == 3:
-            return [{'name': '三槓子', 'fanshu': 2}]
-        return []
-
-    def sansetongke():
-        """三色同刻"""
-        kezi = hudi['kezi']
-        for n in range(1, 10):
-            if kezi['m'][n] and kezi['p'][n] and kezi['s'][n]:
-                return [{'name': '三色同刻', 'fanshu': 2}]
-        return []
-
-    def hunlaotou():
-        """混老頭"""
-        if (hudi['n_yaojiu'] == len(mianzi)) and (hudi['n_shunzi'] == 0) and (hudi['n_zipai'] > 0):
-            return [{'name': '混老頭', 'fanshu': 2}]
-        return []
-
-    def xiaosanyuan():
-        """小三元"""
-        kezi = hudi['kezi']
-        if ((kezi['z'][5] + kezi['z'][6] + kezi['z'][7]) == 2) and re.match(r'z[567]', mianzi[0]):
-            return [{'name': '小三元', 'fanshu': 2}]
-        return []
-
-    def hunyise():
-        """混一色"""
-        for s in ['m', 'p', 's']:
-            yise = re.compile(f'^[z{s}]')
-            if (len([m for m in mianzi if re.search(yise, m)]) == len(mianzi)) and (hudi['n_zipai'] > 0):
-                return [{'name': '混一色', 'fanshu': (3 if hudi['menqian'] else 2)}]
-        return []
-
-    def chunquandaiyaojiu():
-        """純チャン"""
-        if (hudi['n_yaojiu'] == 5) and (hudi['n_shunzi'] > 0) and (hudi['n_zipai'] == 0):
-            return [{'name': '純全帯ヤオ九', 'fanshu': (3 if hudi['menqian'] else 2)}]
-
-    def erbeikou():
-        """二盃口"""
-        if not hudi['menqian']:
-            return []
-        shunzi = hudi['shunzi']
-        beiko = reduce(lambda a, b: a + b, list(map(lambda x: x >> 1, shunzi['m'] + shunzi['p'] + shunzi['s'])))
-        if beiko == 2:
-            return [{'name': '二盃口', 'fanshu': 3}]
-        return []
-
-    def qingyise():
-        """清一色"""
-        for s in ['m', 'p', 's']:
-            yise = re.compile(f'^[{s}]')
-            if (len([m for m in mianzi if re.search(yise, m)]) == len(mianzi)):
-                return [{'name': '清一色', 'fanshu': (6 if hudi['menqian'] else 5)}]
-        return []
-
-    # 役満
-    def goushiwushuang():
-        """国士無双"""
-        if len(mianzi) != 13:
-            return []
-        if hudi['danqi']:
-            return [{'name': '国士無双十三面', 'fanshu': '**'}]
-        else:
-            return [{'name': '国士無双', 'fanshu': '*'}]
-
-    def sianke():
-        """四暗刻"""
-        if hudi['n_ankezi'] != 4:
-            return []
-        if hudi['danqi']:
-            return [{'name': '四暗刻単騎', 'fanshu': '**'}]
-        else:
-            return [{'name': '四暗刻', 'fanshu': '*'}]
-
-    def dasanyuan():
-        """大三元"""
-        kezi = hudi['kezi']
-        if (kezi['z'][5] + kezi['z'][6] + kezi['z'][7]) == 3:
-            bao_mianzi = [m for m in mianzi if re.match(r'z([567])\1\1(?:[\+\=\-]|\1)(?!\!)', m)]
-            baojia = bao_mianzi[2] and re.search(r'[\+\=\-]', bao_mianzi[2])
-            if baojia:
-                return [{'name': '大三元', 'fanshu': '*', 'baojia': baojia[0]}]
-            else:
-                return [{'name': '大三元', 'fanshu': '*'}]
-        return []
-
-    def sixihu():
-        """四喜和"""
-        kezi = hudi['kezi']
-        if (kezi['z'][1] + kezi['z'][2] + kezi['z'][3] + kezi['z'][4]) == 4:
-            bao_mianzi = [m for m in mianzi if re.match(r'z([1234])\1\1(?:[\+\=\-]|\1)(?!\!)', m)]
-            baojia = bao_mianzi[3] and re.search(r'[\+\=\-]', bao_mianzi[3])
-            if baojia:
-                return [{'name': '大四喜', 'fanshu': '**', 'baojia': baojia[0]}]
-            else:
-                return [{'name': '大四喜', 'fanshu': '**'}]
-        if ((kezi['z'][1] + kezi['z'][2] + kezi['z'][3] + kezi['z'][4]) == 3) and re.match(r'z[1234]', mianzi[0]):
-            return [{'name': '小四喜', 'fanshu': '*'}]
-        return []
-
-    def ziyise():
-        """字一色"""
-        if hudi['n_zipai'] == len(mianzi):
-            return [{'name': '字一色', 'fanshu': '*'}]
-        return []
-
-    def lvyise():
-        """緑一色"""
-        if len([m for m in mianzi if re.match(r'[mp]', m)]) > 0:
-            return []
-        if len([m for m in mianzi if re.match(r'z[^6]', m)]) > 0:
-            return []
-        if len([m for m in mianzi if re.match(r's.*[1579]', m)]) > 0:
-            return []
-        return [{'name': '緑一色', 'fanshu': '*'}]
-
-    def qinglaotou():
-        """清老頭"""
-        if (hudi['n_yaojiu'] == 5) and (hudi['n_kezi'] == 4) and (hudi['n_zipai'] == 0):
-            return [{'name': '清老頭', 'fanshu': '*'}]
-        return []
-
-    def sigangzi():
-        """四槓子"""
-        if hudi['n_gangzi'] == 4:
-            return [{'name': '四槓子', 'fanshu': '*'}]
-        return []
-
-    def jiulianbaodeng():
-        """九蓮宝燈"""
-        if len(mianzi) != 1:
-            return []
-        if re.match(r'[mpsz]1112345678999', mianzi[0]):
-            return [{'name': '純正九蓮宝燈', 'fanshu': '**'}]
-        else:
-            return [{'name': '九蓮宝燈', 'fanshu': '*'}]
 
     # 役満の初期値を設定する。状況役に役満(天和、地和)が含まれている場合は
     # それを設定、ない場合は空配列で初期化する
     damanguan = pre_hupai if (len(pre_hupai) > 0) and (pre_hupai[0]['fanshu'][0] == '*') else []
 
+    # 役判定クラス
+    hs = HupaiSolver(mianzi, hudi, rule)
+
     # 判定できた役満を追加していく
     damanguan = (damanguan +    # 天和・地和
-                 goushiwushuang() +     # 国士無双
-                 sianke() +     # 四暗刻
-                 dasanyuan() +  # 大三元
-                 sixihu() +     # 四喜和
-                 ziyise() +     # 字一色
-                 lvyise() +     # 緑一色
-                 qinglaotou() +     # 清老頭
-                 sigangzi() +   # 四槓子
-                 jiulianbaodeng())  # 九蓮宝燈
+                 hs.goushiwushuang() +  # 国士無双
+                 hs.sianke() +  # 四暗刻
+                 hs.dasanyuan() +   # 大三元
+                 hs.sixihu() +  # 四喜和
+                 hs.ziyise() +  # 字一色
+                 hs.lvyise() +  # 緑一色
+                 hs.qinglaotou() +  # 清老頭
+                 hs.sigangzi() +    # 四槓子
+                 hs.jiulianbaodeng())   # 九蓮宝燈
 
     for hupai in damanguan:
         # 「ダブル役満なし」のルールの場合、判定済みダブル役満を通常の役満にダウングレードする
@@ -659,25 +432,25 @@ def get_hupai(
 
     # 通常役を判定する。判定済みの状況役に判定できた役を追加していく
     hupai = (pre_hupai +    # 状況役
-             menqianging() +    # 面前清自摸和
-             fanpai() +     # 翻牌
-             pinghu() +     # 平和
-             duanyaojiu() +     # タンヤオ
-             yibeikou() +   # 一盃口
-             sansetongshun() +  # 三色同順
-             yiqitongguan() +   # 一気通貫
-             hunquandaiyaojiu() +   # チャンタ
-             qiduizi() +    # 七対子
-             duiduihu() +   # 対々和
-             sananke() +    # 三暗刻
-             sangangzi() +  # 三槓子
-             sansetongke() +    # 三色同刻
-             hunlaotou() +  # 混老頭
-             xiaosanyuan() +    # 小三元
-             hunyise() +    # 混一色
-             chunquandaiyaojiu() +  # 純チャン
-             erbeikou() +   # 二盃口
-             qingyise())    # 清一色
+             hs.menqianging() +     # 面前清自摸和
+             hs.fanpai() +  # 翻牌
+             hs.pinghu() +  # 平和
+             hs.duanyaojiu() +  # タンヤオ
+             hs.yibeikou() +    # 一盃口
+             hs.sansetongshun() +   # 三色同順
+             hs.yiqitongguan() +    # 一気通貫
+             hs.hunquandaiyaojiu() +    # チャンタ
+             hs.qiduizi() +     # 七対子
+             hs.duiduihu() +    # 対々和
+             hs.sananke() +     # 三暗刻
+             hs.sangangzi() +   # 三槓子
+             hs.sansetongke() +     # 三色同刻
+             hs.hunlaotou() +   # 混老頭
+             hs.xiaosanyuan() +     # 小三元
+             hs.hunyise() +     # 混一色
+             hs.chunquandaiyaojiu() +   # 純チャン
+             hs.erbeikou() +    # 二盃口
+             hs.qingyise())     # 清一色
 
     # 和了役がある場合は、さらに懸賞役を追加する
     if len(hupai) > 0:
@@ -686,8 +459,115 @@ def get_hupai(
     return hupai
 
 
-def get_defen():
-    pass
+def get_defen(
+    fu: int,
+    hupai: list[dict[str, str | int]],
+    rongpai,
+    param: dict[str, Any]
+):
+    """和了点の計算"""
+
+    if len(hupai) > 0:
+        return {'defen': 0}     # 役なしの場合、打点 0 を返す
+
+    menfeng = param['menfeng']
+    fanshu = None
+    damanguan = None
+    defen = None
+    base = None
+    baojia = None
+    defen2 = None
+    base2 = None
+    baojia2 = None
+
+    # 基本点を計算する
+    if isinstance(hupai[0]['fanshu'], str):     # 役満の場合
+        fu = None   # 符はない
+        # 役満複合数を決定する。役満の複合なしの場合は、1固定とする。
+        damanguan = 1 if not param['damanguan_composite'] else sum(map(lambda h: len(h['fanshu']), hupai))
+        base = 8000 * damanguan
+
+        # パオ責任者がいる場合は責任対象の基本点を算出する
+        # 大三元と大四喜は同時に成立しないので対象の役満は1つ
+        h = next(filter(lambda h: 'baojia' in h, hupai), None)
+        if h:
+            baojia2 = (menfeng + {'+': 1, '=': 2, '-': 3}[h['baojia']]) % 4
+            base2 = 8000 * min(len(h['fanshu']), damanguan)
+
+    else:   # 通常役の場合
+        # 役ごとの翻数の総和を和了の翻数とする
+        fanshu = sum(map(lambda h: h['fanshu'], hupai))
+
+        # 基本点を計算する
+        base = (8000 if fanshu >= 13 and param['rule']['counting_damanguan']    # 数え役満
+                else 6000 if fanshu >= 11   # 三倍満
+                else 4000 if fanshu >= 8    # 倍満
+                else 3000 if fanshu >= 6    # 跳満
+                # 切り上げ満貫
+                else 2000 if param['rule']['ceil_limited'] and fu << (2 + fanshu) == 1920
+                else min(fu << (2 + fanshu), 2000))     # それ以外は2,000点を上限とする
+
+    fenpei = [0, 0, 0, 0]
+    chang = param['jicun']['changbang']
+    lizhi = param['jicun']['lizhibang']
+
+    # パオ責任者がいる場合、パオ分について精算する
+    if baojia2 is not None:
+        if rongpai:
+            base2 = base2 / 2   # ロン和了は放銃者と折半
+        base = base - base2     # 放銃者の負担する基本点を決定する
+        defen2 = base2 * (6 if menfeng == 0 else 4)     # パオ責任者の負担額を決定する
+        fenpei[menfeng] += defen2   # 和了者の収支 = + 負担額
+        fenpei[baojia2] += defen2   # パオ責任者の収支 = - 負担額
+    else:
+        defen2 = 0
+
+    # パオ分以外について和了点を精算する
+    if rongpai or base == 0:    # ロン和了、もしくはパオ責任者一人払いの場合
+        # 支払者を決定する(パオ責任者か放銃者か)
+        baojia = baojia2 if base == 0 else (menfeng + {'+': 1, '=': 2, '-': 3}[rongpai[2]]) % 4
+
+        defen = math.ceil(base * (6 if menfeng == 0 else 4) / 100) * 100    # 負担者の支払額を決定
+
+        # 供託・積み棒も含め精算する
+        # 和了者の収支 = + 負担額 + 積み棒x300 + リーチ棒
+        fenpei[menfeng] += defen + chang * 300 + lizhi * 1000
+        # 支払者の収支 = - 負担額 - 積み棒x300
+        fenpei[baojia] -= defen + chang + 300
+
+    else:   # ツモ和了の場合
+        zhuangjia = math.ceil(base * 2 / 100) * 100     # 親の負担額
+        sanjia = math.ceil(base / 100) * 100    # 子の負担額
+        if menfeng == 0:    # 親の和了
+            defen = zhuangjia * 3   # 和了点 = 親の負担額 x3
+            for i in range(0, 4):
+                if i == menfeng:
+                    # 和了者の収支 = + 和了点 + 積み棒 x300 + リーチ棒
+                    fenpei[i] += defen + chang * 300 + lizhi * 1000
+                else:
+                    # 支払者の負担 = - 子の負担額 - 積み棒 x100
+                    fenpei[i] -= zhuangjia + chang * 100
+        else:   # 子の和了
+            defen = zhuangjia + sanjia * 2  # 和了点 = 親の負担額 + 子の負担額 x2
+            for i in range(0, 4):
+                if i == menfeng:
+                    # 和了者の収支 = + 和了点 + 積み棒 x300 + リーチ棒
+                    fenpei[i] += defen + chang * 300 + lizhi * 1000
+                elif i == 0:
+                    # 支払者(親)の収支 = - 親の負担額 - 積み棒 x100
+                    fenpei[i] -= zhuangjia + chang * 100
+                else:
+                    # 支払者(子)の収支 = - 子の負担額 - 積み棒 x100
+                    fenpei[i] -= sanjia + chang * 100
+
+    return {
+        'hupai': hupai,     # 和了役一覧
+        'fu': fu,   # 符
+        'fanshu': fanshu,   # 翻数
+        'damanguan': damanguan,     # 役満複合数
+        'defen': defen + defen2,    # 和了点
+        'fenpei': fenpei    # 局収支
+    }
 
 
 def mianzi_all(shoupai: Shoupai) -> list[list[str]]:
@@ -732,7 +612,7 @@ def _mianzi(s: str, bingpai: list[int], n: int = 1) -> list[list[str]]:
 
     # 順子を抜き取る
     shunzi = []
-    if (n <= 7) and (bingpai[n] > 0) and (bingpai[n+1] > 0) and (bingpai[n+2] > 0):
+    if n <= 7 and bingpai[n] > 0 and bingpai[n+1] > 0 and bingpai[n+2] > 0:
         bingpai[n] -= 1
         bingpai[n+1] -= 1
         bingpai[n+2] -= 1
@@ -769,7 +649,7 @@ def add_hulepai(mianzi: list[str], p: str) -> list[list[str]]:
     for i in range(0, len(mianzi)):
         if re.search(r'[\+\=\-]|\d{4}', mianzi[i]):     # 副露面子は対象外
             continue
-        if (i > 0) and (mianzi[i] == mianzi[i-1]):  # 重複して処理しない
+        if i > 0 and mianzi[i] == mianzi[i-1]:  # 重複して処理しない
             continue
         m = re.sub(regexp, replacer, mianzi[i])     # 置換を試みる
         if m == mianzi[i]:  # 出来なければ次へ
@@ -779,3 +659,241 @@ def add_hulepai(mianzi: list[str], p: str) -> list[list[str]]:
         new_mianzi.append(tmp_mianzi)
 
     return new_mianzi
+
+
+class HupaiSolver:
+    """役の判定処理をまとめたクラス"""
+
+    def __init__(self, mianzi: list[str], hudi: dict[str, int | bool | dict[str, list[int]]], rule: dict[str, Any]):
+        self._mianzi = mianzi
+        self._hudi = hudi
+        self._rule = rule
+
+    def menqianging(self):
+        """面前ツモ"""
+        if self._hudi['menqian'] and self._hudi['zimo']:
+            return [{'name': '面前清自摸和', 'fanshu': 1}]
+        return []
+
+    def fanpai(self):
+        """翻牌"""
+        feng_hanzi = ['東', '南', '西', '北']
+        fanpai_all = []
+        if self._hudi['kezi']['z'][self._hudi['zhuangfeng']+1]:
+            fanpai_all.append({'name': '場風 '+feng_hanzi[self._hudi['zhuangfeng']],
+                               'fanshu': 1})
+        if self._hudi['kezi']['z'][self._hudi['menqian']+1]:
+            fanpai_all.append({'name': '自風 '+feng_hanzi[self._hudi['menfeng']],
+                               'fanshu': 1})
+        if self._hudi['kezi']['z'][5]:
+            fanpai_all.append({'name': '翻牌 白', 'fanshu': 1})
+        if self._hudi['kezi']['z'][6]:
+            fanpai_all.append({'name': '翻牌 發', 'fanshu': 1})
+        if self._hudi['kezi']['z'][7]:
+            fanpai_all.append({'name': '翻牌 中', 'fanshu': 1})
+        return fanpai_all
+
+    def pinghu(self):
+        """平和"""
+        if self._hudi['pinghu']:
+            return [{'name': '平和', 'fanshu': 1}]
+        return []
+
+    def duanyaojiu(self):
+        """タンヤオ"""
+        if self._hudi['n_yaojiu'] > 0:
+            return []
+        # 喰いタンありの場合、副露していても成立
+        if self._rule['fulou_duanyaojiu'] or self._hudi['menqian']:
+            return [{'name': '断ヤオ九', 'fanshu': 1}]
+        return []
+
+    def yibeikou(self):
+        """一盃口"""
+        if not self._hudi['menqian']:
+            return []
+        shunzi = self._hudi['shunzi']
+        beiko = sum(map(lambda x: x >> 1, shunzi['m'] + shunzi['p'] + shunzi['s']))
+        if beiko == 1:
+            return [{'name': '一盃口', 'fanshu': 1}]
+        return []
+
+    def sansetongshun(self):
+        """三色同順"""
+        shunzi = self._hudi['shunzi']
+        for n in range(1, 8):
+            if shunzi['m'][n] and shunzi['p'][n] and shunzi['s'][n]:
+                return [{'name': '三色同順', 'fanshu': (2 if self._hudi['menqian'] else 1)}]
+        return []
+
+    def yiqitongguan(self):
+        """一気通貫"""
+        shunzi = self._hudi['shunzi']
+        for s in ['m', 'p', 's']:
+            if shunzi[s][1] and shunzi[s][4] and shunzi[s][7]:
+                return [{'name': '一気通貫', 'fanshu': (2 if self._hudi['menqian'] else 1)}]
+        return []
+
+    def hunquandaiyaojiu(self):
+        """チャンタ"""
+        if (self._hudi['n_yaojiu'] == 5) and (self._hudi['n_shunzi'] > 0) and (self._hudi['n_zipai'] > 0):
+            return [{'name': '混全帯ヤオ九', 'fanshu': (2 if self._hudi['menqian'] else 1)}]
+        return []
+
+    def qiduizi(self):
+        """七対子"""
+        if len(self._mianzi) == 7:
+            return [{'name': '七対子', 'fanshu': 2}]
+        return []
+
+    def duiduihu(self):
+        """対々和"""
+        if self._hudi['n_kezi'] == 4:
+            return [{'name': '対々和', 'fanshu': 2}]
+        return []
+
+    def sananke(self):
+        """三暗刻"""
+        if self._hudi['n_ankezi'] == 3:
+            return [{'name': '三暗刻', 'fanshu': 2}]
+        return []
+
+    def sangangzi(self):
+        """三槓子"""
+        if self._hudi['n_gangzi'] == 3:
+            return [{'name': '三槓子', 'fanshu': 2}]
+        return []
+
+    def sansetongke(self):
+        """三色同刻"""
+        kezi = self._hudi['kezi']
+        for n in range(1, 10):
+            if kezi['m'][n] and kezi['p'][n] and kezi['s'][n]:
+                return [{'name': '三色同刻', 'fanshu': 2}]
+        return []
+
+    def hunlaotou(self):
+        """混老頭"""
+        if (self._hudi['n_yaojiu'] == len(self._mianzi)) and (self._hudi['n_shunzi'] == 0) and (self._hudi['n_zipai'] > 0):
+            return [{'name': '混老頭', 'fanshu': 2}]
+        return []
+
+    def xiaosanyuan(self):
+        """小三元"""
+        kezi = self._hudi['kezi']
+        if ((kezi['z'][5] + kezi['z'][6] + kezi['z'][7]) == 2) and re.match(r'z[567]', self._mianzi[0]):
+            return [{'name': '小三元', 'fanshu': 2}]
+        return []
+
+    def hunyise(self):
+        """混一色"""
+        for s in ['m', 'p', 's']:
+            yise = re.compile(f'^[z{s}]')
+            if (len([m for m in self._mianzi if re.search(yise, m)]) == len(self._mianzi)) and (self._hudi['n_zipai'] > 0):
+                return [{'name': '混一色', 'fanshu': (3 if self._hudi['menqian'] else 2)}]
+        return []
+
+    def chunquandaiyaojiu(self):
+        """純チャン"""
+        if (self._hudi['n_yaojiu'] == 5) and (self._hudi['n_shunzi'] > 0) and (self._hudi['n_zipai'] == 0):
+            return [{'name': '純全帯ヤオ九', 'fanshu': (3 if self._hudi['menqian'] else 2)}]
+
+    def erbeikou(self):
+        """二盃口"""
+        if not self._hudi['menqian']:
+            return []
+        shunzi = self._hudi['shunzi']
+        beiko = sum(map(lambda x: x >> 1, shunzi['m'] + shunzi['p'] + shunzi['s']))
+        if beiko == 2:
+            return [{'name': '二盃口', 'fanshu': 3}]
+        return []
+
+    def qingyise(self):
+        """清一色"""
+        for s in ['m', 'p', 's']:
+            yise = re.compile(f'^[{s}]')
+            if (len([m for m in self._mianzi if re.search(yise, m)]) == len(self._mianzi)):
+                return [{'name': '清一色', 'fanshu': (6 if self._hudi['menqian'] else 5)}]
+        return []
+
+    # 役満
+    def goushiwushuang(self):
+        """国士無双"""
+        if len(self._mianzi) != 13:
+            return []
+        if self._hudi['danqi']:
+            return [{'name': '国士無双十三面', 'fanshu': '**'}]
+        else:
+            return [{'name': '国士無双', 'fanshu': '*'}]
+
+    def sianke(self):
+        """四暗刻"""
+        if self._hudi['n_ankezi'] != 4:
+            return []
+        if self._hudi['danqi']:
+            return [{'name': '四暗刻単騎', 'fanshu': '**'}]
+        else:
+            return [{'name': '四暗刻', 'fanshu': '*'}]
+
+    def dasanyuan(self):
+        """大三元"""
+        kezi = self._hudi['kezi']
+        if (kezi['z'][5] + kezi['z'][6] + kezi['z'][7]) == 3:
+            bao_mianzi = [m for m in self._mianzi if re.match(r'z([567])\1\1(?:[\+\=\-]|\1)(?!\!)', m)]
+            baojia = bao_mianzi[2] and re.search(r'[\+\=\-]', bao_mianzi[2])
+            if baojia:
+                return [{'name': '大三元', 'fanshu': '*', 'baojia': baojia[0]}]
+            else:
+                return [{'name': '大三元', 'fanshu': '*'}]
+        return []
+
+    def sixihu(self):
+        """四喜和"""
+        kezi = self._hudi['kezi']
+        if (kezi['z'][1] + kezi['z'][2] + kezi['z'][3] + kezi['z'][4]) == 4:
+            bao_mianzi = [m for m in self._mianzi if re.match(r'z([1234])\1\1(?:[\+\=\-]|\1)(?!\!)', m)]
+            baojia = bao_mianzi[3] and re.search(r'[\+\=\-]', bao_mianzi[3])
+            if baojia:
+                return [{'name': '大四喜', 'fanshu': '**', 'baojia': baojia[0]}]
+            else:
+                return [{'name': '大四喜', 'fanshu': '**'}]
+        if ((kezi['z'][1] + kezi['z'][2] + kezi['z'][3] + kezi['z'][4]) == 3) and re.match(r'z[1234]', self._mianzi[0]):
+            return [{'name': '小四喜', 'fanshu': '*'}]
+        return []
+
+    def ziyise(self):
+        """字一色"""
+        if self._hudi['n_zipai'] == len(self._mianzi):
+            return [{'name': '字一色', 'fanshu': '*'}]
+        return []
+
+    def lvyise(self):
+        """緑一色"""
+        if len([m for m in self._mianzi if re.match(r'[mp]', m)]) > 0:
+            return []
+        if len([m for m in self._mianzi if re.match(r'z[^6]', m)]) > 0:
+            return []
+        if len([m for m in self._mianzi if re.match(r's.*[1579]', m)]) > 0:
+            return []
+        return [{'name': '緑一色', 'fanshu': '*'}]
+
+    def qinglaotou(self):
+        """清老頭"""
+        if (self._hudi['n_yaojiu'] == 5) and (self._hudi['n_kezi'] == 4) and (self._hudi['n_zipai'] == 0):
+            return [{'name': '清老頭', 'fanshu': '*'}]
+        return []
+
+    def sigangzi(self):
+        """四槓子"""
+        if self._hudi['n_gangzi'] == 4:
+            return [{'name': '四槓子', 'fanshu': '*'}]
+        return []
+
+    def jiulianbaodeng(self):
+        """九蓮宝燈"""
+        if len(self._mianzi) != 1:
+            return []
+        if re.match(r'[mpsz]1112345678999', self._mianzi[0]):
+            return [{'name': '純正九蓮宝燈', 'fanshu': '**'}]
+        else:
+            return [{'name': '九蓮宝燈', 'fanshu': '*'}]
