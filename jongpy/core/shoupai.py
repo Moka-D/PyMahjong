@@ -61,8 +61,8 @@ class Shoupai:
         elif re.search(r'^[mpsz](\d)\1\1\1[\+\=\-]?$', h):  # 暗槓か大明槓の場合
             # 鳴いた牌以外の順序を0が後ろになるように並び変える
             m_tail = re.search(r'\d[\+\=\-]$', m)
-            return (m[0] + ''.join(sorted(re.findall(r'\d(?![\+\=\-])', m), reverse=True)) +
-                    (m_tail.group() if m_tail else ''))
+            return (m[0] + ''.join(sorted(re.findall(r'\d(?![\+\=\-])', m), reverse=True))
+                    + (m_tail.group() if m_tail else ''))
 
         elif re.search(r'^[mps]\d+\-\d*$', h):  # それ以外は順子とみなす
             # まず順子として正しいかチェック
@@ -276,7 +276,7 @@ class Shoupai:
             # 存在しない牌を打牌しようとしている場合、伏せ牌があるなら
             # 伏せ牌からの打牌と解釈する。伏せ牌がない場合は例外を発生する
             if self._bingpai['_'] == 0:
-                raise Exception([self, s+str(n)])
+                raise Exception([self, s + str(n)])
             self._bingpai['_'] -= 1
         else:
             bingpai[n] -= 1     # 牌の枚数を減算する
@@ -516,7 +516,7 @@ class Shoupai:
                         dapai.append(p)     # 赤牌以外はそのまま加える
                     else:   # 赤牌を考慮する場合
                         if bingpai[0] > 0 and s + '0' != self._zimo or bingpai[0] > 1:
-                            dapai.append(s+'0')     # 赤牌として加える
+                            dapai.append(s + '0')     # 赤牌として加える
                         if bingpai[0] < bingpai[5]:
                             dapai.append(p)     # 赤牌以外として加える
 
@@ -580,7 +580,7 @@ class Shoupai:
                     mianzi.append(s + str(n - 2) + str(n - 1) + p[1] + d)
 
         # 鳴く牌が中央に当たる場合
-        if n >= 2 and n <= 8 and bingpai[n-1] > 0 and bingpai[n + 1] > 0:
+        if n >= 2 and n <= 8 and bingpai[n - 1] > 0 and bingpai[n + 1] > 0:
             if not check or bingpai[n] < 14 - (len(self._fulou) + 1) * 3:
                 if n - 1 == 5 and bingpai[0] > 0:
                     mianzi.append(s + '06-7')
@@ -646,7 +646,7 @@ class Shoupai:
             if n == 5 and bingpai[0] >= 1:
                 mianzi.append(s + '50' + p[1] + d)
             if n != 5 or bingpai[5] - bingpai[0] >= 2:
-                mianzi.append(s + str(n)*2 + p[1] + d)
+                mianzi.append(s + str(n) * 2 + p[1] + d)
 
         return mianzi
 
@@ -696,9 +696,9 @@ class Shoupai:
             # 赤牌を考慮して mianzi に大明槓可能な面子を追加する
             if bingpai[n] == 3:
                 if n == 5:
-                    mianzi = [s + '5'*(3 - bingpai[0]) + '0'*bingpai[0] + p[1] + d]
+                    mianzi = [s + '5' * (3 - bingpai[0]) + '0' * bingpai[0] + p[1] + d]
                 else:
-                    mianzi = [s + str(n)*4 + d]
+                    mianzi = [s + str(n) * 4 + d]
 
         else:   # 暗槓・加槓の場合
             # ツモの直後以外は暗槓・加槓できないので None を返す
@@ -721,16 +721,16 @@ class Shoupai:
                             continue
                         # 赤牌を考慮して mianzi に暗槓を加える
                         if n == 5:
-                            mianzi.append(s + '5'*(4 - bingpai[0]) + '0'*bingpai[0])
+                            mianzi.append(s + '5' * (4 - bingpai[0]) + '0' * bingpai[0])
                         else:
-                            mianzi.append(s + str(n)*4)
+                            mianzi.append(s + str(n) * 4)
 
                     else:   # その他の場合
                         if self._lizhi:     # リーチ後は槓できない
                             continue
                         # 副露面子に当該の牌で加槓できる刻子があれば mianzi に槓子として追加する
                         for m in self._fulou:
-                            if m.replace('0', '5')[0:4] == s + str(n)*3:
+                            if m.replace('0', '5')[0:4] == s + str(n) * 3:
                                 if n == 5 and bingpai[0] > 0:
                                     mianzi.append(m + '0')
                                 else:
