@@ -1,7 +1,15 @@
 """jongpy.core.shoupai"""
 
-import re
 import copy
+import re
+
+from jongpy.core.exceptions import (InvalidOperationError,
+                                    MianziFormatError,
+                                    PaiFormatError,
+                                    PaiNotExistError,
+                                    PaiOverFlowError,
+                                    ShoupaiOverFlowError,
+                                    ShoupaiUnderFlowError)
 
 
 class Shoupai:
@@ -103,15 +111,14 @@ class Shoupai:
                 continue
 
             # 伏せ牌以外の場合
-            p = Shoupai.valid_pai(p)
-            if p is None:
-                raise Exception(p)  # 牌の形式が不正なら例外を発生
+            if Shoupai.valid_pai(p) is None:
+                raise PaiFormatError(p)     # 牌の形式が不正なら例外を発生
 
             s = p[0]
             n = int(p[1])
             if self._bingpai[s][n] == 4:
                 # 5枚目の牌なら例外を発生
-                raise Exception([self, p])
+                raise PaiOverFlowError(self, p)
 
             self._bingpai[s][n] += 1    # 手牌の枚数を加算
             if s != 'z' and n == 0:
@@ -119,7 +126,7 @@ class Shoupai:
                 self._bingpai[s][5] += 1
 
     @classmethod
-    def from_string(cls, paistr: str = ''):
+    def from_str(cls, paistr: str = ''):
         """
         牌姿文字列から`Shoupai`インスタンスを生成
 
@@ -173,7 +180,7 @@ class Shoupai:
         shoupai._zimo = shoupai._zimo or zimo or None
 
         # 牌姿の手牌部分が * で終端する場合はリーチ直後とみなす
-        shoupai._lizhi = bingpai[-1] == '*'
+        shoupai._lizhi = bingpai[-1] == '*' if bingpai else False
 
         return shoupai
 
@@ -198,7 +205,7 @@ class Shoupai:
                         n_pai -= 1
                         n_hongpai -= 1
                 # 赤牌を考慮して牌を追加する
-                for i in range(n_pai):
+                for _ in range(n_pai):
                     if n == 5 and n_hongpai > 0:
                         suitstr += '0'
                         n_hongpai -= 1
@@ -244,7 +251,7 @@ class Shoupai:
 
         return shoupai
 
-    def update_from_string(self, paistr: str):
+    def update(self, paistr: str):
         """
         手牌情報を``paistr``で置き換える
 
@@ -255,7 +262,7 @@ class Shoupai:
         """
 
         # paistr からインスタンスを生成
-        shoupai = Shoupai.from_string(paistr)
+        shoupai = Shoupai.from_str(paistr)
 
         # 生成したインスタンスからインスタンス変数をコピーする
         self._bingpai = {
@@ -276,7 +283,7 @@ class Shoupai:
             # 存在しない牌を打牌しようとしている場合、伏せ牌があるなら
             # 伏せ牌からの打牌と解釈する。伏せ牌がない場合は例外を発生する
             if self._bingpai['_'] == 0:
-                raise Exception([self, s + str(n)])
+                raise PaiNotExistError(self, s + str(n))
             self._bingpai['_'] -= 1
         else:
             bingpai[n] -= 1     # 牌の枚数を減算する
@@ -293,16 +300,11 @@ class Shoupai:
             ツモ牌の文字列表現
         check : bool, default True
             多牌のチェックを行うかどうか
-
-        Exceptions
-        ----------
-        Exception
-            ``check``が真のときかつ多牌となる場合と、ツモ牌``p``が5枚目の牌の場合
         """
 
         # ツモ直後の場合は多牌となるので例外を発生する
         if check and self._zimo is not None:
-            raise Exception([self, p])
+            raise ShoupaiOverFlowError(self, p)
 
         if p == '_':    # 伏せ牌の場合
             self._bingpai['_'] += 1     # 伏せ牌の枚数を加算
@@ -310,18 +312,18 @@ class Shoupai:
         else:   # 通常牌の場合
             # 不正な牌の場合、例外を発生する
             if Shoupai.valid_pai(p) is None:
-                raise Exception(p)
+                raise PaiFormatError(p)
             s = p[0]
             n = int(p[1])
             bingpai = self._bingpai[s]
             # 5枚目の牌の場合、例外を発生する
             if bingpai[n] == 4:
-                raise Exception([self, p])
+                raise PaiOverFlowError(self, p)
             bingpai[n] += 1    # 枚数を加算する
             # 赤牌の場合は対応する「黒牌」の枚数も加算する
             if n == 0:
                 if bingpai[5] == 4:
-                    raise Exception([self, p])
+                    raise PaiOverFlowError(self, p)
                 bingpai[5] += 1
             self._zimo = s + str(n)     # ツモ牌を設定する
 
@@ -335,20 +337,15 @@ class Shoupai:
             牌の文字列表現
         check : True, default True
             少牌のチェックを行うかどうか
-
-        Exceptions
-        ----------
-        Exception
-            ``check``が真のときかつ打牌後に少牌となる場合
         """
 
         # ツモあるいは副露直後以外の打牌は少牌となるので例外を発生する
         if check and self._zimo is None:
-            raise Exception([self, p])
+            raise ShoupaiUnderFlowError(self, p)
 
         # 不正な牌の場合、例外を発生する
         if Shoupai.valid_pai(p) is None:
-            raise Exception(p)
+            raise PaiFormatError(p)
 
         s = p[0]
         n = int(p[1])
@@ -368,28 +365,23 @@ class Shoupai:
             面子の文字列表現
         check : bool, default True
             多牌のチェックを行うかどうか
-
-        Exceptions
-        ----------
-        Exception
-            ``check``が真のときかつ多牌となる場合
         """
 
         # ツモ直後の場合は多牌となるので例外を発生
         if check and self._zimo is not None:
-            raise Exception([self, m])
+            raise ShoupaiOverFlowError(self, m)
 
         # 不正な面子の場合、例外を発生
         if m != Shoupai.valid_mianzi(m):
-            raise Exception(m)
+            raise MianziFormatError(m)
 
         # 暗槓の場合、例外を発生
         if re.search(r'\d{4}$', m):
-            raise Exception([self, m])
+            raise InvalidOperationError(self, m)
 
         # 加槓の場合、例外を発生
         if re.search(r'\d{3}[\+\=\-]\d$', m):
-            raise Exception([self, m])
+            raise InvalidOperationError(self, m)
 
         # 副露に使う牌の枚数を減算する
         s = m[0]
@@ -412,22 +404,17 @@ class Shoupai:
             面子の文字列表現
         check : bool, default True
             少牌のチェックを行うかどうか
-
-        Exceptions
-        ----------
-        Exception
-            ``check``が真のときかつ槓後に少牌となる場合
         """
 
-        # ツモの直後は槓できないので、例外を発生
+        # ツモの直後以外は槓できないので、例外を発生
         if check and self._zimo is None:
-            raise Exception([self, m])
+            raise ShoupaiUnderFlowError(self, m)
         if check and len(self._zimo) > 2:
-            raise Exception([self, m])
+            raise ShoupaiUnderFlowError(self, m)
 
         # 不正な面子の場合、例外を発生
         if m != Shoupai.valid_mianzi(m):
-            raise Exception([self, m])
+            raise MianziFormatError(self, m)
 
         s = m[0]
         if re.search(r'\d{4}$', m):     # 暗槓の場合
@@ -443,12 +430,12 @@ class Shoupai:
             try:
                 i = self._fulou.index(m1)
             except ValueError:
-                raise Exception([self, m])
+                raise InvalidOperationError(self, m)
             self._fulou[i] = m  # 元の刻子を槓子置き換える
             self._decrease(s, int(m[-1]))   # 加槓した牌の枚数を減算する
 
         else:   # 暗槓でも加槓でもない場合は例外を発生
-            raise Exception([self, m])
+            raise InvalidOperationError(self, m)
 
         self._zimo = None   # ツモしていない状態にする
 
@@ -490,10 +477,10 @@ class Shoupai:
             n = int(re.search(r'\d(?=[\+\=\-])', m).group()) or 5
             deny.append(s + str(n))     # 現物の喰い替えを禁止する
             # 順子の場合はスジ喰い替えも禁止する
-            if not re.search(r'^[mpsz](\d)\1\1$', m.replace('0', '5')):
-                if n < 7 and re.fullmatch(r'[mps]\d\-\d\d', m):
+            if not re.search(r'^[mpsz](\d)\1\1', m.replace('0', '5')):
+                if n < 7 and re.search(r'^[mps]\d\-\d\d$', m):
                     deny.append(s + str(n + 3))
-                if n > 3 and re.fullmatch(r'[mps]\d\d\d\-', m):
+                if n > 3 and re.search(r'^[mps]\d\d\d\-$', m):
                     deny.append(s + str(n - 3))
 
         # dapai に打牌可能な牌を追加していく。副露面子以外から重複しないよう追加
@@ -550,7 +537,7 @@ class Shoupai:
 
         # 不正な牌の場合、例外を発生する
         if Shoupai.valid_pai(p) is None:
-            raise Exception(p)
+            raise PaiFormatError(p)
 
         mianzi = []
         s = p[0]
@@ -558,7 +545,7 @@ class Shoupai:
         d = re.search(r'[\+\=\-]$', p)
         # 方向(下家: +, 対面: =, 上家: -)が指定されていない場合は例外を発生する
         if d is None:
-            raise Exception(p)
+            raise InvalidOperationError(p)
         d = d.group()
         if s == 'z' or d != '-':    # 上家からの数牌以外はチー不可
             return mianzi
@@ -624,7 +611,7 @@ class Shoupai:
 
         # 不正な牌の場合、例外を発生する
         if Shoupai.valid_pai(p) is None:
-            raise Exception(p)
+            raise PaiFormatError(p)
 
         mianzi = []
         s = p[0]
@@ -632,7 +619,7 @@ class Shoupai:
         d = re.search(r'[\+\=\-]$', p)
         # 方向(下家: +, 対面: =, 上家: -)が指定されていない場合は例外を発生する
         if d is None:
-            raise Exception(p)
+            raise InvalidOperationError(p)
         d = d.group()
         if self._lizhi:     # リーチ後はポンできない
             return mianzi
@@ -643,7 +630,7 @@ class Shoupai:
         if bingpai[n] >= 2:
             if n == 5 and bingpai[0] >= 2:
                 mianzi.append(s + '00' + p[1] + d)
-            if n == 5 and bingpai[0] >= 1:
+            if n == 5 and bingpai[0] >= 1 and bingpai[5] - bingpai[0] >= 1:
                 mianzi.append(s + '50' + p[1] + d)
             if n != 5 or bingpai[5] - bingpai[0] >= 2:
                 mianzi.append(s + str(n) * 2 + p[1] + d)
@@ -669,7 +656,7 @@ class Shoupai:
             牌``p``で大明槓可能な面子のリスト
             もしくは、加槓、暗槓が可能な面子のリスト
             カンすると少牌あるいは多牌になる場合は None を返す
-            """
+        """
 
         mianzi = []
         if p is not None:   # 大明槓の場合
@@ -679,14 +666,14 @@ class Shoupai:
 
             # 不正な牌の場合、例外を発生する
             if Shoupai.valid_pai(p) is None:
-                raise Exception(p)
+                raise PaiFormatError(p)
 
             s = p[0]
             n = int(p[1]) or 5
             d = re.search(r'[\+\=\-]$', p)
             # 方向(下家: +, 対面: =, 上家: -)が指定されていない場合は例外を発生する
             if d is None:
-                raise Exception(p)
+                raise InvalidOperationError(p)
             d = d.group()
             if self._lizhi:     # リーチ後は大明槓できない
                 return mianzi

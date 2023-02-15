@@ -540,7 +540,6 @@ class HupaiSolver:
                 return [{'name': '清一色', 'fanshu': (6 if self._hudi['menqian'] else 5)}]
         return []
 
-    # 役満
     def goushiwushuang(self):
         """国士無双"""
         if len(self._mianzi) != 13:
