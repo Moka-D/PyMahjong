@@ -527,6 +527,45 @@ class TestShoupaiFulou:
         with pytest.raises(MianziFormatError):
             shoupai.fulou('m231-')
 
+    def test_error_angang(self):
+        shoupai = _shoupai('_____________')
+        with pytest.raises(InvalidOperationError):
+            shoupai.fulou('m1111')
+
+    def test_error_gagan(self):
+        shoupai = _shoupai('_____________')
+        with pytest.raises(InvalidOperationError):
+            shoupai.fulou('m111+1')
+
+    def test_error_after_zimo(self):
+        shoupai = _shoupai('m123p456s789z11567')
+        with pytest.raises(ShoupaiOverFlowError):
+            shoupai.fulou('z111=')
+
+    def test_error_after_fulou(self):
+        shoupai = _shoupai('m123p456s789z22,z111=,')
+        with pytest.raises(ShoupaiOverFlowError):
+            shoupai.fulou('z222=')
+
+    def test_nocheck_tapai(self):
+        shoupai1 = _shoupai('m123p456s789z11567')
+        shoupai1.fulou('z111=', False)
+        assert str(shoupai1) == 'm123p456s789z567,z111=,'
+        shoupai2 = _shoupai('m123p456s789z22,z111=,')
+        shoupai2.fulou('z222=', False)
+        assert str(shoupai2) == 'm123p456s789,z111=,z222=,'
+
+    def test_error_noexist_pai(self):
+        shoupai1 = _shoupai('m123p456s789z2,z111=')
+        with pytest.raises(PaiNotExistError):
+            shoupai1.fulou('z333=')
+        shoupai2 = _shoupai('m123p40s789z22,z111=')
+        with pytest.raises(PaiNotExistError):
+            shoupai2.fulou('p456-')
+        shoupai3 = _shoupai('m123p45s789z22,z111=')
+        with pytest.raises(PaiNotExistError):
+            shoupai3.fulou('p406-')
+
 
 class TestShoupaiGang:
 
@@ -668,6 +707,18 @@ class TestShoupaiGang:
         shoupai = _shoupai('m12p456s789z5657,m222=')
         with pytest.raises(InvalidOperationError):
             shoupai.gang('m111=1')
+
+
+class TestShoupaiMenqian:
+
+    def test_noexist_fulou(self):
+        assert _shoupai('m123p0s789z4567').menqian
+
+    def test_exist_fulou(self):
+        assert not _shoupai('p0s789z4567,m123-').menqian
+
+    def test_angang(self):
+        assert _shoupai('m123p0s789,z1111').menqian
 
 
 class TestShoupaiLizhi:
