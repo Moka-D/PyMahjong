@@ -324,20 +324,16 @@ class TestShoupaiUpdate:
         self.shoupai = Shoupai()
 
     def test_update(self, setup):
-        self.shoupai.update('m123p456s789z1122z2')
-        assert str(self.shoupai) == 'm123p456s789z1122z2'
+        assert str(self.shoupai.update('m123p456s789z1122z2')) == 'm123p456s789z1122z2'
 
     def test_update_fulou(self, setup):
-        self.shoupai.update('m123p456s789z2,z111=')
-        assert str(self.shoupai) == 'm123p456s789z2,z111='
+        assert str(self.shoupai.update('m123p456s789z2,z111=')) == 'm123p456s789z2,z111='
 
     def test_update_lizhi(self, setup):
-        self.shoupai.update('m123p456s789z1122*')
-        assert str(self.shoupai) == 'm123p456s789z1122*'
+        assert str(self.shoupai.update('m123p456s789z1122*')) == 'm123p456s789z1122*'
 
     def test_update_hidden(self, setup):
-        self.shoupai.update('__________,z111=')
-        assert str(self.shoupai) == '__________,z111='
+        assert str(self.shoupai.update('__________,z111=')) == '__________,z111='
 
 
 class TestShoupaiZimo:
@@ -347,28 +343,22 @@ class TestShoupaiZimo:
         self.shoupai = _shoupai('m123p456s789z4567')
 
     def test_manzu(self, setup):
-        self.shoupai.zimo('m1')
-        assert str(self.shoupai) == 'm123p456s789z4567m1'
+        assert str(self.shoupai.zimo('m1')) == 'm123p456s789z4567m1'
 
     def test_pinzu(self, setup):
-        self.shoupai.zimo('p1')
-        assert str(self.shoupai) == 'm123p456s789z4567p1'
+        assert str(self.shoupai.zimo('p1')) == 'm123p456s789z4567p1'
 
     def test_sohzu(self, setup):
-        self.shoupai.zimo('s1')
-        assert str(self.shoupai) == 'm123p456s789z4567s1'
+        assert str(self.shoupai.zimo('s1')) == 'm123p456s789z4567s1'
 
     def test_zipai(self, setup):
-        self.shoupai.zimo('z1')
-        assert str(self.shoupai) == 'm123p456s789z4567z1'
+        assert str(self.shoupai.zimo('z1')) == 'm123p456s789z4567z1'
 
     def test_hongpai(self, setup):
-        self.shoupai.zimo('m0')
-        assert str(self.shoupai) == 'm123p456s789z4567m0'
+        assert str(self.shoupai.zimo('m0')) == 'm123p456s789z4567m0'
 
     def test_hidden(self, setup):
-        self.shoupai.zimo('_')
-        assert str(self.shoupai) == 'm123p456s789z4567_'
+        assert str(self.shoupai.zimo('_')) == 'm123p456s789z4567_'
 
     def test_error_invalid_pai(self, setup):
         with pytest.raises(PaiFormatError):
@@ -383,27 +373,21 @@ class TestShoupaiZimo:
             self.shoupai.zimo('xx')
 
     def test_error_double_zimo(self):
-        shoupai = _shoupai('m123p456s789z34567')
         with pytest.raises(ShoupaiOverFlowError):
-            shoupai.zimo('m1')
+            _shoupai('m123p456s789z34567').zimo('m1')
 
     def test_error_after_fulou(self):
-        shoupai = _shoupai('m123p456z34567,s789-,')
         with pytest.raises(ShoupaiOverFlowError):
-            shoupai.zimo('m1')
+            _shoupai('m123p456z34567,s789-,').zimo('m1')
 
     def test_nocheck_shoupai_overflow(self):
-        shoupai = _shoupai('m123p456s789z34567')
-        shoupai.zimo('m1', False)
-        assert str(shoupai) == 'm123p456s789z34567m1'
+        assert str(_shoupai('m123p456s789z34567').zimo('m1', False)) == 'm123p456s789z34567m1'
 
     def test_error_pai_overflow(self):
-        shoupai1 = _shoupai('m123p456s789z1111')
         with pytest.raises(PaiOverFlowError):
-            shoupai1.zimo('z1')
-        shoupai2 = _shoupai('m455556s789z1111')
+            _shoupai('m123p456s789z1111').zimo('z1')
         with pytest.raises(PaiOverFlowError):
-            shoupai2.zimo('m0')
+            _shoupai('m455556s789z1111').zimo('m0')
 
 
 class TestShoupaiDapai:
@@ -413,39 +397,28 @@ class TestShoupaiDapai:
         self.shoupai = _shoupai('m123p456s789z34567')
 
     def test_manzu(self, setup):
-        self.shoupai.dapai('m1')
-        assert str(self.shoupai) == 'm23p456s789z34567'
+        assert str(self.shoupai.dapai('m1')) == 'm23p456s789z34567'
 
     def test_pinzu(self, setup):
-        self.shoupai.dapai('p4')
-        assert str(self.shoupai) == 'm123p56s789z34567'
+        assert str(self.shoupai.dapai('p4')) == 'm123p56s789z34567'
 
     def test_sohzu(self, setup):
-        self.shoupai.dapai('s7')
-        assert str(self.shoupai) == 'm123p456s89z34567'
+        assert str(self.shoupai.dapai('s7')) == 'm123p456s89z34567'
 
     def test_zipai(self, setup):
-        self.shoupai.dapai('z3')
-        assert str(self.shoupai) == 'm123p456s789z4567'
+        assert str(self.shoupai.dapai('z3')) == 'm123p456s789z4567'
 
     def test_hongpai(self):
-        shoupai = _shoupai('m123p406s789z34567')
-        shoupai.dapai('p0')
-        assert str(shoupai) == 'm123p46s789z34567'
+        assert str(_shoupai('m123p406s789z34567').dapai('p0')) == 'm123p46s789z34567'
 
     def test_lizhi(self, setup):
-        self.shoupai.dapai('z7*')
-        assert str(self.shoupai) == 'm123p456s789z3456*'
+        assert str(self.shoupai.dapai('z7*')) == 'm123p456s789z3456*'
 
     def test_nocheck_after_lizhi(self):
-        shoupai = _shoupai('m123p456s789z11223*')
-        shoupai.dapai('z1')
-        assert str(shoupai) == 'm123p456s789z1223*'
+        assert str(_shoupai('m123p456s789z11223*').dapai('z1')) == 'm123p456s789z1223*'
 
     def test_hidden(self):
-        shoupai = _shoupai('______________')
-        shoupai.dapai('m1')
-        assert str(shoupai) == '_____________'
+        assert str(_shoupai('______________').dapai('m1')) == '_____________'
 
     def test_error_invalid_pai(self, setup):
         with pytest.raises(PaiFormatError):
@@ -464,61 +437,43 @@ class TestShoupaiDapai:
             self.shoupai.dapai('_')
 
     def test_error_after_dapai(self):
-        shoupai = _shoupai('m123p456s789z4567')
         with pytest.raises(ShoupaiUnderFlowError):
-            shoupai.dapai('m1')
+            _shoupai('m123p456s789z4567').dapai('m1')
 
     def test_nocheck_underflow(self):
-        shoupai = _shoupai('m123p456s789z4567')
-        shoupai.dapai('m1', False)
-        assert str(shoupai) == 'm23p456s789z4567'
+        assert str(_shoupai('m123p456s789z4567').dapai('m1', False)) == 'm23p456s789z4567'
 
     def test_error_noexist_pai(self, setup):
         with pytest.raises(PaiNotExistError):
             self.shoupai.dapai('z1')
         with pytest.raises(PaiNotExistError):
             self.shoupai.dapai('p0')
-        shoupai = _shoupai('m123p406s789z34567')
         with pytest.raises(PaiNotExistError):
-            shoupai.dapai('p5')
+            _shoupai('m123p406s789z34567').dapai('p5')
 
 
 class TestShoupaiFulou:
 
     def test_manzu(self):
-        shoupai = _shoupai('m23p456s789z34567')
-        shoupai.fulou('m1-23')
-        assert str(shoupai) == 'p456s789z34567,m1-23,'
+        assert str(_shoupai('m23p456s789z34567').fulou('m1-23')) == 'p456s789z34567,m1-23,'
 
     def test_pinzu(self):
-        shoupai = _shoupai('m123p46s789z34567')
-        shoupai.fulou('p45-6')
-        assert str(shoupai) == 'm123s789z34567,p45-6,'
+        assert str(_shoupai('m123p46s789z34567').fulou('p45-6')) == 'm123s789z34567,p45-6,'
 
     def test_sohzu(self):
-        shoupai = _shoupai('m123p456s99z34567')
-        shoupai.fulou('s999+')
-        assert str(shoupai) == 'm123p456z34567,s999+,'
+        assert str(_shoupai('m123p456s99z34567').fulou('s999+')) == 'm123p456z34567,s999+,'
 
     def test_zipai(self):
-        shoupai = _shoupai('m123p456s789z1167')
-        shoupai.fulou('z111=')
-        assert str(shoupai) == 'm123p456s789z67,z111=,'
+        assert str(_shoupai('m123p456s789z1167').fulou('z111=')) == 'm123p456s789z67,z111=,'
 
     def test_hongpai(self):
-        shoupai = _shoupai('m123p500s789z4567')
-        shoupai.fulou('p5005-')
-        assert str(shoupai) == 'm123s789z4567,p5005-'
+        assert str(_shoupai('m123p500s789z4567').fulou('p5005-')) == 'm123s789z4567,p5005-'
 
     def test_lizhi(self):
-        shoupai = _shoupai('m123p456s789z4567*')
-        shoupai.fulou('m1-23')
-        assert str(shoupai) == 'm1p456s789z4567*,m1-23,'
+        assert str(_shoupai('m123p456s789z4567*').fulou('m1-23')) == 'm1p456s789z4567*,m1-23,'
 
     def test_hidden(self):
-        shoupai = _shoupai('_____________')
-        shoupai.fulou('m1-23')
-        assert str(shoupai) == '___________,m1-23,'
+        assert str(_shoupai('_____________').fulou('m1-23')) == '___________,m1-23,'
 
     def test_error_invalid_mianzi(self):
         shoupai = _shoupai('m123p456s789z4567')
@@ -528,185 +483,127 @@ class TestShoupaiFulou:
             shoupai.fulou('m231-')
 
     def test_error_angang(self):
-        shoupai = _shoupai('_____________')
         with pytest.raises(InvalidOperationError):
-            shoupai.fulou('m1111')
+            _shoupai('_____________').fulou('m1111')
 
     def test_error_gagan(self):
-        shoupai = _shoupai('_____________')
         with pytest.raises(InvalidOperationError):
-            shoupai.fulou('m111+1')
+            _shoupai('_____________').fulou('m111+1')
 
     def test_error_after_zimo(self):
-        shoupai = _shoupai('m123p456s789z11567')
         with pytest.raises(ShoupaiOverFlowError):
-            shoupai.fulou('z111=')
+            _shoupai('m123p456s789z11567').fulou('z111=')
 
     def test_error_after_fulou(self):
-        shoupai = _shoupai('m123p456s789z22,z111=,')
         with pytest.raises(ShoupaiOverFlowError):
-            shoupai.fulou('z222=')
+            _shoupai('m123p456s789z22,z111=,').fulou('z222=')
 
     def test_nocheck_tapai(self):
-        shoupai1 = _shoupai('m123p456s789z11567')
-        shoupai1.fulou('z111=', False)
-        assert str(shoupai1) == 'm123p456s789z567,z111=,'
-        shoupai2 = _shoupai('m123p456s789z22,z111=,')
-        shoupai2.fulou('z222=', False)
-        assert str(shoupai2) == 'm123p456s789,z111=,z222=,'
+        assert str(_shoupai('m123p456s789z11567').fulou('z111=', False)) == 'm123p456s789z567,z111=,'
+        assert str(_shoupai('m123p456s789z22,z111=,').fulou('z222=', False)) == 'm123p456s789,z111=,z222=,'
 
     def test_error_noexist_pai(self):
-        shoupai1 = _shoupai('m123p456s789z2,z111=')
         with pytest.raises(PaiNotExistError):
-            shoupai1.fulou('z333=')
-        shoupai2 = _shoupai('m123p40s789z22,z111=')
+            _shoupai('m123p456s789z2,z111=').fulou('z333=')
         with pytest.raises(PaiNotExistError):
-            shoupai2.fulou('p456-')
-        shoupai3 = _shoupai('m123p45s789z22,z111=')
+            _shoupai('m123p40s789z22,z111=').fulou('p456-')
         with pytest.raises(PaiNotExistError):
-            shoupai3.fulou('p406-')
+            _shoupai('m123p45s789z22,z111=').fulou('p406-')
 
 
 class TestShoupaiGang:
 
     def test_manzu_angang(self):
-        shoupai = _shoupai('m1111p456s789z4567')
-        shoupai.gang('m1111')
-        assert str(shoupai) == 'p456s789z4567,m1111'
+        assert str(_shoupai('m1111p456s789z4567').gang('m1111')) == 'p456s789z4567,m1111'
 
     def test_manzu_gagang(self):
-        shoupai = _shoupai('m1p456s789z4567,m111+')
-        shoupai.gang('m111+1')
-        assert str(shoupai) == 'p456s789z4567,m111+1'
+        assert str(_shoupai('m1p456s789z4567,m111+').gang('m111+1')) == 'p456s789z4567,m111+1'
 
     def test_pinzu_angang(self):
-        shoupai = _shoupai('m123p5555s789z4567')
-        shoupai.gang('p5555')
-        assert str(shoupai) == 'm123s789z4567,p5555'
+        assert str(_shoupai('m123p5555s789z4567').gang('p5555')) == 'm123s789z4567,p5555'
 
     def test_pinzu_gagang(self):
-        shoupai = _shoupai('m123p5s789z4567,p555=')
-        shoupai.gang('p555=5')
-        assert str(shoupai) == 'm123s789z4567,p555=5'
+        assert str(_shoupai('m123p5s789z4567,p555=').gang('p555=5')) == 'm123s789z4567,p555=5'
 
     def test_sohzu_angang(self):
-        shoupai = _shoupai('m123p456s9999z4567')
-        shoupai.gang('s9999')
-        assert str(shoupai) == 'm123p456z4567,s9999'
+        assert str(_shoupai('m123p456s9999z4567').gang('s9999')) == 'm123p456z4567,s9999'
 
     def test_sohzu_gagan(self):
-        shoupai = _shoupai('m123p456s9z4567,s999-')
-        shoupai.gang('s999-9')
-        assert str(shoupai) == 'm123p456z4567,s999-9'
+        assert str(_shoupai('m123p456s9z4567,s999-').gang('s999-9')) == 'm123p456z4567,s999-9'
 
     def test_zipai_angang(self):
-        shoupai = _shoupai('m123p456s789z67777')
-        shoupai.gang('z7777')
-        assert str(shoupai) == 'm123p456s789z6,z7777'
+        assert str(_shoupai('m123p456s789z67777').gang('z7777')) == 'm123p456s789z6,z7777'
 
     def test_zipai_gagan(self):
-        shoupai = _shoupai('m123p456s789z67,z777+')
-        shoupai.gang('z777+7')
-        assert str(shoupai) == 'm123p456s789z6,z777+7'
+        assert str(_shoupai('m123p456s789z67,z777+').gang('z777+7')) == 'm123p456s789z6,z777+7'
 
     def test_hongpai_angang(self):
-        shoupai = _shoupai('m0055p456s789z4567')
-        shoupai.gang('m5500')
-        assert str(shoupai) == 'p456s789z4567,m5500'
+        assert str(_shoupai('m0055p456s789z4567').gang('m5500')) == 'p456s789z4567,m5500'
 
     def test_hongpai_gagan(self):
-        shoupai = _shoupai('m123p5s789z4567,p505=')
-        shoupai.gang('p505=5')
-        assert str(shoupai) == 'm123s789z4567,p505=5'
+        assert str(_shoupai('m123p5s789z4567,p505=').gang('p505=5')) == 'm123s789z4567,p505=5'
 
     def test_nocheck_lizhi_angang(self):
-        shoupai = _shoupai('m1111p456s789z4567*')
-        shoupai.gang('m1111')
-        assert str(shoupai) == 'p456s789z4567*,m1111'
+        assert str(_shoupai('m1111p456s789z4567*').gang('m1111')) == 'p456s789z4567*,m1111'
 
     def test_nocheck_lizhi_gagang(self):
-        shoupai = _shoupai('m1p456s789z4567*,m111+')
-        shoupai.gang('m111+1')
-        assert str(shoupai) == 'p456s789z4567*,m111+1'
+        assert str(_shoupai('m1p456s789z4567*,m111+').gang('m111+1')) == 'p456s789z4567*,m111+1'
 
     def test_hidden_angang(self):
-        shoupai = _shoupai('______________')
-        shoupai.gang('m5550')
-        assert str(shoupai) == '__________,m5550'
+        assert str(_shoupai('______________').gang('m5550')) == '__________,m5550'
 
     def test_hidden_gagang(self):
-        shoupai = _shoupai('___________,m555=')
-        shoupai.gang('m555=0')
-        assert str(shoupai) == '__________,m555=0'
+        assert str(_shoupai('___________,m555=').gang('m555=0')) == '__________,m555=0'
 
     def test_error_shunzi(self):
-        shoupai = _shoupai('m1112456s789z4567')
         with pytest.raises(InvalidOperationError):
-            shoupai.gang('m456-')
+            _shoupai('m1112456s789z4567').gang('m456-')
 
     def test_error_kezi(self):
-        shoupai = _shoupai('m1112456s789z4567')
         with pytest.raises(InvalidOperationError):
-            shoupai.gang('m111+')
+            _shoupai('m1112456s789z4567').gang('m111+')
 
     def test_error_invalid_angang(self):
-        shoupai = _shoupai('m1112456s789z4567')
         with pytest.raises(MianziFormatError):
-            shoupai.gang('m1112')
+            _shoupai('m1112456s789z4567').gang('m1112')
 
     def test_error_invalid_gagang(self):
-        shoupai = _shoupai('m2456s789z4567,m111+')
         with pytest.raises(MianziFormatError):
-            shoupai.gang('m111+2')
+            _shoupai('m2456s789z4567,m111+').gang('m111+2')
 
     def test_error_after_dapai(self):
-        shoupai = _shoupai('m1111p456s789z456')
         with pytest.raises(ShoupaiUnderFlowError):
-            shoupai.gang('m1111')
+            _shoupai('m1111p456s789z456').gang('m1111')
 
     def test_error_after_fulou(self):
-        shoupai = _shoupai('m1111s789z4567,p456-,')
         with pytest.raises(ShoupaiUnderFlowError):
-            shoupai.gang('m1111')
+            _shoupai('m1111s789z4567,p456-,').gang('m1111')
 
     def test_error_after_gang(self):
-        shoupai = _shoupai('m1111p4444s789z567')
-        shoupai.gang('m1111')
+        shoupai = _shoupai('m1111p4444s789z567').gang('m1111')
         with pytest.raises(ShoupaiUnderFlowError):
             shoupai.gang('p4444')
 
     def test_nocheck_underflow(self):
-        shoupai1 = _shoupai('m1111p456s789z567')
-        shoupai1.gang('m1111', False)
-        assert str(shoupai1) == 'p456s789z567,m1111'
-        shoupai2 = _shoupai('m1111s789z4567,p456-,')
-        shoupai2.gang('m1111', False)
-        assert str(shoupai2) == 's789z4567,p456-,m1111'
-        shoupai3 = _shoupai('m1111p4444s789z567')
-        shoupai3.gang('m1111', False)
-        shoupai3.gang('p4444', False)
-        assert str(shoupai3) == 's789z567,m1111,p4444'
+        assert str(_shoupai('m1111p456s789z567').gang('m1111', False)) == 'p456s789z567,m1111'
+        assert str(_shoupai('m1111s789z4567,p456-,').gang('m1111', False)) == 's789z4567,p456-,m1111'
+        assert str(_shoupai('m1111p4444s789z567').gang('m1111', False).gang('p4444', False)) == 's789z567,m1111,p4444'
 
     def test_error_noexist_angang(self):
-        shoupai = _shoupai('m1112p456s789z4567')
         with pytest.raises(PaiNotExistError):
-            shoupai.gang('m1111')
+            _shoupai('m1112p456s789z4567').gang('m1111')
 
     def test_error_noexist_gagang(self):
-        shoupai1 = _shoupai('m13p456s789z567,m222=')
         with pytest.raises(PaiNotExistError):
-            shoupai1.gang('m2222')
-        shoupai2 = _shoupai('m10p456s789z567,m555=')
+            _shoupai('m13p456s789z567,m222=').gang('m2222')
         with pytest.raises(PaiNotExistError):
-            shoupai2.gang('m555=5')
-        shoupai3 = _shoupai('m15p456s789z567,m555=')
+            _shoupai('m10p456s789z567,m555=').gang('m555=5')
         with pytest.raises(PaiNotExistError):
-            shoupai3.gang('m555=0')
+            _shoupai('m15p456s789z567,m555=').gang('m555=0')
 
     def test_error_noexsit_minko_gagan(self):
-        shoupai = _shoupai('m12p456s789z5657,m222=')
         with pytest.raises(InvalidOperationError):
-            shoupai.gang('m111=1')
+            _shoupai('m12p456s789z5657,m222=').gang('m111=1')
 
 
 class TestShoupaiMenqian:
@@ -727,10 +624,7 @@ class TestShoupaiLizhi:
         assert not _shoupai('_____________').lizhi
 
     def test_ok_lizhi(self):
-        shoupai = _shoupai('_____________')
-        shoupai.zimo('z7')
-        shoupai.dapai('z7_*')
-        assert shoupai.lizhi
+        assert _shoupai('_____________').zimo('z7').dapai('z7_*').lizhi
 
 
 class TestShoupaiGetDapai:
