@@ -276,6 +276,8 @@ class Shoupai:
         self._zimo = shoupai._zimo
         self._lizhi = shoupai._lizhi
 
+        return self
+
     def _decrease(self, s: str, n: int):
 
         bingpai = self._bingpai[s]
@@ -327,6 +329,8 @@ class Shoupai:
                 bingpai[5] += 1
             self._zimo = s + str(n)     # ツモ牌を設定する
 
+        return self
+
     def dapai(self, p: str, check: bool = True):
         """
         手牌から牌``p``を打牌する
@@ -354,6 +358,8 @@ class Shoupai:
         # 打牌がリーチ宣言の場合はリーチ後に状態を変更する
         if p[-1] == '*':
             self._lizhi = True
+
+        return self
 
     def fulou(self, m: str, check: bool = True):
         """
@@ -393,6 +399,8 @@ class Shoupai:
         # 大明槓以外の場合は副露直後の状態にする
         if not re.search(r'\d{4}', m):
             self._zimo = m
+
+        return self
 
     def gang(self, m: str, check: bool = True):
         """
@@ -438,6 +446,8 @@ class Shoupai:
             raise InvalidOperationError(self, m)
 
         self._zimo = None   # ツモしていない状態にする
+
+        return self
 
     @property
     def menqian(self):
