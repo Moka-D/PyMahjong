@@ -1,22 +1,246 @@
-import pytest
-from jongpy.core.xiangting import xiangting
+import pytest   # noqa
+import json
+
 from jongpy.core.shoupai import Shoupai
+from jongpy.core.xiangting import (xiangting_yiban,
+                                   xiangting_qidui,
+                                   xiangting_goushi,
+                                   xiangting,
+                                   XIANGTING_INF)
+
+
+class TestXiangtingYiban:
+
+    def test_empty(self):
+        assert xiangting_yiban(Shoupai.from_str()) == 13
+
+    def test_tingpai(self):
+        assert xiangting_yiban(Shoupai.from_str('m123p406s789z1122')) == 0
+
+    def test_hule(self):
+        assert xiangting_yiban(Shoupai.from_str('m123p456s789z11222')) == -1
+
+    def test_fulou(self):
+        assert xiangting_yiban(Shoupai.from_str('m123p456s789z2,z111=')) == 0
+
+    def test_no_jianpai(self):
+        assert xiangting_yiban(Shoupai.from_str('m12389p456s12789z1')) == 1
+
+    def test_over_dazi(self):
+        assert xiangting_yiban(Shoupai.from_str('m12389p456s1289z11')) == 1
+
+    def test_lack_dazi(self):
+        assert xiangting_yiban(Shoupai.from_str('m133345568z23677')) == 2
+
+    def test_shoupai_overflow(self):
+        shoupai = Shoupai.from_str('m123,p123-,s456-,m789-')
+        shoupai._fulou.append('z555=')
+        assert xiangting_yiban(shoupai) == 0
+
+    def test_shoupai_underflow(self):
+        assert xiangting_yiban(Shoupai.from_str('p234s567,m222=,p0-67')) == 1
+
+    def test_kezi_shunzi(self):
+        assert xiangting_yiban(Shoupai.from_str('p222345z1234567')) == 4
+
+    def test_shunzi_alone_pai_shunzi(self):
+        assert xiangting_yiban(Shoupai.from_str('p2344456z123456')) == 4
+
+    def test_duizi_kezi_shunzi(self):
+        assert xiangting_yiban(Shoupai.from_str('p11222345z12345')) == 3
+
+    def test_duizi_shunzi_shunzi_duizi(self):
+        assert xiangting_yiban(Shoupai.from_str('p2234556788z123')) == 2
+
+    def test_hule_after_fulou(self):
+        assert xiangting_yiban(Shoupai.from_str('m11122,p123-,s12-3,z111=,')) == 0
+
+    def test_nomarl_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_1.json', 'r') as f:
+            data1 = json.load(f)
+        for data in data1:
+            shoupai = Shoupai(data['q'])
+            assert xiangting_yiban(shoupai) == data['x'][0]
+
+    def test_hunyise_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_2.json', 'r') as f:
+            data2 = json.load(f)
+        for data in data2:
+            shoupai = Shoupai(data['q'])
+            assert xiangting_yiban(shoupai) == data['x'][0]
+
+    def test_qingyise_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_3.json', 'r') as f:
+            data3 = json.load(f)
+        for data in data3:
+            shoupai = Shoupai(data['q'])
+            assert xiangting_yiban(shoupai) == data['x'][0]
+
+    def test_goushi_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_4.json', 'r') as f:
+            data4 = json.load(f)
+        for data in data4:
+            shoupai = Shoupai(data['q'])
+            assert xiangting_yiban(shoupai) == data['x'][0]
+
+
+class TestXiangTingGoushi:
+
+    def test_empty(self):
+        assert xiangting_goushi(Shoupai.from_str()) == 13
+
+    def test_noexist_yao(self):
+        assert xiangting_goushi(Shoupai.from_str('m23455p345s45678')) == 13
+
+    def test_noexist_jiangpai(self):
+        assert xiangting_goushi(Shoupai.from_str('m189p12s249z12345')) == 4
+
+    def test_exist_jiangpai(self):
+        assert xiangting_goushi(Shoupai.from_str('m119p12s299z12345')) == 3
+
+    def test_tingpai(self):
+        assert xiangting_goushi(Shoupai.from_str('m11p19s19z1234567')) == 0
+
+    def test_tingpai_13men(self):
+        assert xiangting_goushi(Shoupai.from_str('m19p19s19z1234567')) == 0
+
+    def test_hule(self):
+        assert xiangting_goushi(Shoupai.from_str('m119p19s19z1234567')) == -1
+
+    def test_fulou(self):
+        assert xiangting_goushi(Shoupai.from_str('m19p19s19z1234,z777=')) == XIANGTING_INF
+
+    def test_shoupai_overflow(self):
+        assert xiangting_goushi(Shoupai.from_str('m19p19s19z12345677').zimo('m1', False)) == -1
+
+    def test_shoupai_underflow(self):
+        assert xiangting_goushi(Shoupai.from_str('m119p19s19z12345')) == 1
+
+    def test_nomarl_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_1.json', 'r') as f:
+            data1 = json.load(f)
+        for data in data1:
+            shoupai = Shoupai(data['q'])
+            assert xiangting_goushi(shoupai) == data['x'][1]
+
+    def test_hunyise_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_2.json', 'r') as f:
+            data2 = json.load(f)
+        for data in data2:
+            shoupai = Shoupai(data['q'])
+            assert xiangting_goushi(shoupai) == data['x'][1]
+
+    def test_qingyise_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_3.json', 'r') as f:
+            data3 = json.load(f)
+        for data in data3:
+            shoupai = Shoupai(data['q'])
+            assert xiangting_goushi(shoupai) == data['x'][1]
+
+    def test_goushi_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_4.json', 'r') as f:
+            data4 = json.load(f)
+        for data in data4:
+            shoupai = Shoupai(data['q'])
+            assert xiangting_goushi(shoupai) == data['x'][1]
+
+
+class TestXiangtingQidui:
+
+    def test_empty(self):
+        assert xiangting_qidui(Shoupai.from_str()) == 13
+
+    def test_noexist_duizi(self):
+        assert xiangting_qidui(Shoupai.from_str('m19p19s19z1234567')) == 6
+
+    def test_exist_ganzi(self):
+        assert xiangting_qidui(Shoupai.from_str('m1188p288s05z1111')) == 2
+
+    def test_exist_ankezi(self):
+        assert xiangting_qidui(Shoupai.from_str('m1188p2388s05z111')) == 1
+
+    def test_tow_ankezi(self):
+        assert xiangting_qidui(Shoupai.from_str('m1188p288s055z111')) == 2
+
+    def test_tingpai(self):
+        assert xiangting_qidui(Shoupai.from_str('m1188p288s05z1177')) == 0
+
+    def test_hule(self):
+        assert xiangting_qidui(Shoupai.from_str('m1188p288s05z1177p2')) == -1
+
+    def test_fulou(self):
+        assert xiangting_qidui(Shoupai.from_str('m1188p288s05z2,z111=')) == XIANGTING_INF
+
+    def test_shoupai_overflow(self):
+        assert xiangting_qidui(Shoupai.from_str('m1188p2288s05z1122').zimo('z7', False).zimo('z7', False)) == -1
+
+    def test_shoupai_underflow(self):
+        assert xiangting_qidui(Shoupai.from_str('m1188s05z1122')) == 3
+
+    def test_nomarl_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_1.json', 'r') as f:
+            data1 = json.load(f)
+        for data in data1:
+            shoupai = Shoupai(data['q'])
+            assert xiangting_qidui(shoupai) == data['x'][2]
+
+    def test_hunyise_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_2.json', 'r') as f:
+            data2 = json.load(f)
+        for data in data2:
+            shoupai = Shoupai(data['q'])
+            assert xiangting_qidui(shoupai) == data['x'][2]
+
+    def test_qingyise_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_3.json', 'r') as f:
+            data3 = json.load(f)
+        for data in data3:
+            shoupai = Shoupai(data['q'])
+            assert xiangting_qidui(shoupai) == data['x'][2]
+
+    def test_goushi_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_4.json', 'r') as f:
+            data4 = json.load(f)
+        for data in data4:
+            shoupai = Shoupai(data['q'])
+            assert xiangting_qidui(shoupai) == data['x'][2]
 
 
 class TestXiangting:
 
-    def test_xiangting_normal(self):
-        shoupai1 = Shoupai.from_string('m12389p456s12789z1')
-        assert xiangting(shoupai1) == 1
-        shoupai2 = Shoupai.from_string('s1223444556889s1')
-        assert xiangting(shoupai2) == 1
+    def test_normal_tingpai(self):
+        assert xiangting(Shoupai.from_str('m123p406s789z1122')) == 0
 
-    def test_xiangting_goushi(self):
-        shoupai = Shoupai.from_string('m11259p19z123456z3')
-        assert xiangting(shoupai) == 2
+    def test_goushi_tingpai(self):
+        assert xiangting(Shoupai.from_str('m19p19s19z1234567')) == 0
 
-    def test_xiangting_qidui(self):
-        shoupai1 = Shoupai.from_string('m1144p3366s89z4567')
-        assert xiangting(shoupai1) == 2
-        shoupai2 = Shoupai.from_string('m11144p33366s8899')
-        assert xiangting(shoupai2) == 1
+    def test_qidui_tingpai(self):
+        assert xiangting(Shoupai.from_str('m1188p288s05z1177')) == 0
+
+    def test_nomarl_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_1.json', 'r') as f:
+            data1 = json.load(f)
+        for data in data1:
+            shoupai = Shoupai(data['q'])
+            assert xiangting(shoupai) == min(data['x'])
+
+    def test_hunyise_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_2.json', 'r') as f:
+            data2 = json.load(f)
+        for data in data2:
+            shoupai = Shoupai(data['q'])
+            assert xiangting(shoupai) == min(data['x'])
+
+    def test_qingyise_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_3.json', 'r') as f:
+            data3 = json.load(f)
+        for data in data3:
+            shoupai = Shoupai(data['q'])
+            assert xiangting(shoupai) == min(data['x'])
+
+    def test_goushi_10000patterns(self, shared_datadir):
+        with open(shared_datadir / 'xiangting_4.json', 'r') as f:
+            data4 = json.load(f)
+        for data in data4:
+            shoupai = Shoupai(data['q'])
+            assert xiangting(shoupai) == min(data['x'])
