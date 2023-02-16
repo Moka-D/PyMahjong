@@ -7,6 +7,7 @@ from jongpy.core.xiangting import (
     xiangting,
     XIANGTING_INF
 )
+from jongpy.core.hule import hule_mianzi
 
 
 __all__ = [
@@ -15,4 +16,5 @@ __all__ = [
     'xiangting_yiban',
     'xiangting',
     'XIANGTING_INF',
+    'hule_mianzi',
 ]
