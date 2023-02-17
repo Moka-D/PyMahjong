@@ -6,6 +6,7 @@ import math
 from typing import Any
 from jongpy.core.shoupai import Shoupai
 from jongpy.core.shan import Shan
+from jongpy.core.rule import rule
 
 
 def _mianzi(s: str, bingpai: list[int], n: int = 1) -> list[list[str]]:
@@ -771,7 +772,7 @@ def get_defen(
     if isinstance(hupai[0]['fanshu'], str):     # 役満の場合
         fu = None   # 符はない
         # 役満複合数を決定する。役満の複合なしの場合は、1固定とする。
-        damanguan = 1 if not param['damanguan_composite'] else sum(map(lambda h: len(h['fanshu']), hupai))
+        damanguan = 1 if not param['compound_damanguan'] else sum(map(lambda h: len(h['fanshu']), hupai))
         base = 8000 * damanguan
 
         # パオ責任者がいる場合は責任対象の基本点を算出する
@@ -791,7 +792,7 @@ def get_defen(
                 else 4000 if fanshu >= 8    # 倍満
                 else 3000 if fanshu >= 6    # 跳満
                 # 切り上げ満貫
-                else 2000 if param['rule']['ceil_limited'] and fu << (2 + fanshu) == 1920
+                else 2000 if param['rule']['ceiled_manguan'] and fu << (2 + fanshu) == 1920
                 else min(fu << (2 + fanshu), 2000))     # それ以外は2,000点を上限とする
 
     fenpei = [0, 0, 0, 0]
@@ -893,3 +894,29 @@ def hule(shoupai: Shoupai, rongpai: str, param: dict):
             h_max = rv
 
     return h_max
+
+
+def hule_param(param: dict[str, Any] = {}):
+    """点数計算に関する各種パラメータを取得"""
+
+    rv = {
+        'rule': param.get('rule') or rule(),
+        'zhuangfeng': param.get('zhuangfeng') or 0,
+        'menfeng': param.get('menfeng') or 1,
+        'hupai': {
+            'lizhi': param.get('lizhi') or 0,
+            'yiva': param.get('yifa') or False,
+            'qianggang': param.get('qianggang') or False,
+            'lingshang': param.get('lingshang') or False,
+            'haidi': param.get('haidi') or 0,
+            'tianhu': param.get('tianhu') or 0
+        },
+        'baopai': [].extend(param.get('baopai')) if param.get('baopai') else [],
+        'fubaopai': [].extend(param.get('fubaopai')) if param.get('fubaopai') else [],
+        'jicun': {
+            'changbang': param.get('changbang') or 0,
+            'lizhibang': param.get('lizhibang') or 0
+        }
+    }
+
+    return rv
