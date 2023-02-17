@@ -1,5 +1,6 @@
 """jongpy.core.xiangting"""
 
+from typing import Callable
 from jongpy.core.shoupai import Shoupai
 
 
@@ -149,7 +150,7 @@ def mianzi_all(shoupai: Shoupai, jiangpai: bool = False):
     return x_min
 
 
-def xiangting_yiban(shoupai: Shoupai):
+def xiangting_yiban(shoupai: Shoupai) -> int:
     """
     一般形のシャンテン数計算
 
@@ -185,7 +186,7 @@ def xiangting_yiban(shoupai: Shoupai):
     return x_min
 
 
-def xiangting_goushi(shoupai: Shoupai):
+def xiangting_goushi(shoupai: Shoupai) -> int:
     """
     国士無双のシャンテン数
 
@@ -220,7 +221,7 @@ def xiangting_goushi(shoupai: Shoupai):
     return 12 - n_yaojiu if n_duizi else 13 - n_yaojiu
 
 
-def xiangting_qidui(shoupai: Shoupai):
+def xiangting_qidui(shoupai: Shoupai) -> int:
     """
     七対子のシャンテン数
 
@@ -259,7 +260,7 @@ def xiangting_qidui(shoupai: Shoupai):
     return 13 - n_duizi * 2 - n_guli
 
 
-def xiangting(shoupai: Shoupai):
+def xiangting(shoupai: Shoupai) -> int:
     """
     一般形・国士無双形・七対子形のシャンテン数から最小の値を取得
 
@@ -278,3 +279,39 @@ def xiangting(shoupai: Shoupai):
         xiangting_goushi(shoupai),  # 国士無双形
         xiangting_qidui(shoupai)    # 七対子形
     )
+
+
+def tingpai(shoupai: Shoupai, f_xiangting: Callable[[Shoupai], int] = xiangting) -> list[str] | None:
+    """
+    シャンテン数の進む牌の一覧を取得
+    テンパイ時は和了牌(待ち牌)の一覧となる
+
+    Parameters
+    ----------
+    shoupai : Shoupai
+        手牌
+    f_xiangting : callable
+        シャンテン数計算関数のコールバック
+
+    Returns
+    -------
+    pai : list[str] (or None)
+        シャンテン数の進む牌の一覧
+    """
+
+    if shoupai._zimo:
+        return None
+
+    pai = []
+    n_xiangting = f_xiangting(shoupai)
+    for s in ['m', 'p', 's', 'z']:
+        bingpai = shoupai._bingpai[s]
+        for n in range(1, len(bingpai)):
+            if bingpai[n] >= 4:
+                continue
+            bingpai[n] += 1
+            if f_xiangting(shoupai) < n_xiangting:
+                pai.append(s + str(n))
+            bingpai[n] -= 1
+
+    return pai

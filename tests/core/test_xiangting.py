@@ -6,6 +6,7 @@ from jongpy.core.xiangting import (xiangting_yiban,
                                    xiangting_qidui,
                                    xiangting_goushi,
                                    xiangting,
+                                   tingpai,
                                    XIANGTING_INF)
 
 
@@ -244,3 +245,32 @@ class TestXiangting:
         for data in data4:
             shoupai = Shoupai(data['q'])
             assert xiangting(shoupai) == min(data['x'])
+
+
+class TestTingpai:
+
+    def test_error_can_dapai(self):
+        assert tingpai(Shoupai.from_str('m123p456s789z12345')) is None
+        assert tingpai(Shoupai.from_str('m123p456z12345,s789-,')) is None
+
+    def test_without_fulou(self):
+        assert tingpai(Shoupai.from_str('m123p456s789z1234')) == ['z1', 'z2', 'z3', 'z4']
+
+    def test_with_fulou(self):
+        assert tingpai(Shoupai.from_str('m123p456z1234,s789-')) == ['z1', 'z2', 'z3', 'z4']
+
+    def test_goushi_13men(self):
+        assert tingpai(Shoupai.from_str('m19p19s19z1234567')) == ['m1', 'm9', 'p1', 'p9', 's1', 's9',
+                                                                  'z1', 'z2', 'z3', 'z4', 'z5', 'z6', 'z7']
+
+    def test_not_include_four_pai(self):
+        assert tingpai(Shoupai.from_str('m1234444p456s789')) == ['m1']
+
+    def test_include_ankezi(self):
+        assert tingpai(Shoupai.from_str('m13p456s789z11,m2222')) == ['m2']
+
+    def test_qidui_and_yiban(self):
+        assert tingpai(Shoupai.from_str('m11155p2278s66z17')) == ['m5', 'p2', 'p6', 'p7', 'p8', 'p9', 's6', 'z1', 'z7']
+
+    def test_f_xiangting(self):
+        assert tingpai(Shoupai.from_str('m11155p2278s66z17'), xiangting_qidui) == ['p7', 'p8', 'z1', 'z7']

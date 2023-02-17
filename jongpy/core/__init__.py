@@ -5,7 +5,8 @@ from jongpy.core.shoupai import Shoupai
 from jongpy.core.xiangting import (xiangting_goushi,
                                    xiangting_qidui,
                                    xiangting_yiban,
-                                   xiangting)
+                                   xiangting,
+                                   tingpai)
 from jongpy.core.hule import (hule,
                               hule_mianzi,
                               hule_param)
@@ -18,6 +19,7 @@ __all__ = [
     'xiangting_qidui',
     'xiangting_yiban',
     'xiangting',
+    'tingpai',
     'hule',
     'hule_mianzi',
     'hule_param',
