@@ -45,7 +45,7 @@ def rule(param: dict = {}):
         'double_damanguan': True,   # ダブル役満あり
         'counting_damanguan': True,     # 数え役満あり
         'damanguan_baojia': True,   # 役満パオあり
-        'ceiled_manguan': True,     # 切り上げ満貫あり
+        'ceiled_manguan': False,    # 切り上げ満貫あり
     }
 
     for key, value in param.items():

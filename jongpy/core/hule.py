@@ -367,23 +367,23 @@ def get_pre_hupai(hupai: dict[str, int | bool]) -> list[dict[str, str | int]]:
 
     pre_hupai = []
 
-    if hupai['lizhi'] == 1:
+    if hupai.get('lizhi') == 1:
         pre_hupai.append({'name': '立直', 'fanshu': 1})
-    if hupai['lizhi'] == 2:
+    if hupai.get('lizhi') == 2:
         pre_hupai.append({'name': 'ダブル立直', 'fanshu': 2})
-    if hupai['yifa']:
+    if hupai.get('yifa'):
         pre_hupai.append({'name': '一発', 'fanshu': 1})
-    if hupai['haidi'] == 1:
+    if hupai.get('haidi') == 1:
         pre_hupai.append({'name': '海底摸月', 'fanshu': 1})
-    if hupai['haidi'] == 2:
+    if hupai.get('haidi') == 2:
         pre_hupai.append({'name': '河底撈魚', 'fanshu': 1})
-    if hupai['lingshang']:
+    if hupai.get('lingshang'):
         pre_hupai.append({'name': '嶺上開花', 'fanshu': 1})
-    if hupai['qianggang']:
+    if hupai.get('qianggang'):
         pre_hupai.append({'name': '槍槓', 'fanshu': 1})
-    if hupai['tianhu'] == 1:
+    if hupai.get('tianhu') == 1:
         pre_hupai.append({'name': '天和', 'fanshu': '*'})
-    if hupai['tianhu'] == 2:
+    if hupai.get('tianhu') == 2:
         pre_hupai.append({'name': '地和', 'fanshu': '*'})
 
     return pre_hupai
@@ -400,7 +400,7 @@ class HupaiSolver:
     def menqianging(self):
         """面前ツモ"""
         if self._hudi['menqian'] and self._hudi['zimo']:
-            return [{'name': '面前清自摸和', 'fanshu': 1}]
+            return [{'name': '門前清自摸和', 'fanshu': 1}]
         return []
 
     def fanpai(self):
@@ -820,7 +820,7 @@ def get_defen(
         base = base - base2     # 放銃者の負担する基本点を決定する
         defen2 = base2 * (6 if menfeng == 0 else 4)     # パオ責任者の負担額を決定する
         fenpei[menfeng] += defen2   # 和了者の収支 = + 負担額
-        fenpei[baojia2] += defen2   # パオ責任者の収支 = - 負担額
+        fenpei[baojia2] -= defen2   # パオ責任者の収支 = - 負担額
     else:
         defen2 = 0
 
@@ -835,7 +835,7 @@ def get_defen(
         # 和了者の収支 = + 負担額 + 積み棒x300 + リーチ棒
         fenpei[menfeng] += defen + chang * 300 + lizhi * 1000
         # 支払者の収支 = - 負担額 - 積み棒x300
-        fenpei[baojia] -= defen + chang + 300
+        fenpei[baojia] -= defen + chang * 300
 
     else:   # ツモ和了の場合
         zhuangjia = math.ceil(base * 2 / 100) * 100     # 親の負担額
@@ -920,7 +920,7 @@ def hule(shoupai: Shoupai, rongpai: str | None, param: dict) -> dict[str, Any] |
         # 和了点が同じ場合は、より翻数の多い方を(役満があればそれを)
         # 翻数も同じ場合はより符の高い方を選択する
         if (not h_max or rv['defen'] > h_max['defen'] or rv['defen'] == h_max['defen']
-                and (not rv['defen'] or rv['fanshu'] > h_max['fanshu']
+                and (not rv['fanshu'] or rv['fanshu'] > h_max['fanshu']
                      or rv['fanshu'] == h_max['fanshu'] and rv['fu'] > h_max['fu'])):
             h_max = rv
 
@@ -942,8 +942,8 @@ def hule_param(param: dict[str, Any] = {}):
             'haidi': param.get('haidi') or 0,
             'tianhu': param.get('tianhu') or 0
         },
-        'baopai': [].extend(param['baopai']) if 'baopai' in param else [],
-        'fubaopai': [].extend(param['fubaopai']) if 'fubaopai' in param else [],
+        'baopai': param.get('baopai') or [],
+        'fubaopai': param.get('fubaopai') or [],
         'jicun': {
             'changbang': param.get('changbang') or 0,
             'lizhibang': param.get('lizhibang') or 0
