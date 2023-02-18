@@ -695,7 +695,12 @@ def get_hupai(
     return hupai
 
 
-def get_post_hupai(shoupai: Shoupai, rongpai: str | None, baopai, fubaopai) -> list[dict[str, str | int]]:
+def get_post_hupai(
+    shoupai: Shoupai,
+    rongpai: str | None,
+    baopai: list[str],
+    fubaopai: list[str] | None
+) -> list[dict[str, str | int]]:
     """懸賞役一覧の作成"""
 
     # 手牌に和了牌を加え、文字列系に変換する

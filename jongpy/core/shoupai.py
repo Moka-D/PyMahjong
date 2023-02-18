@@ -21,7 +21,7 @@ class Shoupai:
     _lizhi: bool
 
     @staticmethod
-    def valid_pai(p: str):
+    def valid_pai(p: str) -> str | None:
         """
         牌の文字列表現判定
 
@@ -41,7 +41,7 @@ class Shoupai:
         return p if re.search(r'^(?:[mps]\d|z[1-7])_?\*?[\+\=\-]?$', p) else None
 
     @staticmethod
-    def valid_mianzi(m: str):
+    def valid_mianzi(m: str) -> str | None:
         """
         面子の文字列表現判定
 
@@ -92,7 +92,7 @@ class Shoupai:
 
         return None
 
-    def __init__(self, qipai: list[str] = []):
+    def __init__(self, qipai: list[str] = []) -> None:
 
         self._bingpai = {   # 副露牌を含まない手牌の枚数
             '_': 0,     # 伏せ牌
