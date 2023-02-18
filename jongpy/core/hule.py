@@ -7,6 +7,7 @@ from typing import Any
 from jongpy.core.shoupai import Shoupai
 from jongpy.core.shan import Shan
 from jongpy.core.rule import rule
+from jongpy.core.exceptions import InvalidOperationError
 
 
 def _mianzi(s: str, bingpai: list[int], n: int = 1) -> list[list[str]]:
@@ -408,7 +409,7 @@ class HupaiSolver:
         fanpai_all = []
         if self._hudi['kezi']['z'][self._hudi['zhuangfeng'] + 1]:
             fanpai_all.append({'name': '場風 ' + feng_hanzi[self._hudi['zhuangfeng']], 'fanshu': 1})
-        if self._hudi['kezi']['z'][self._hudi['menqian'] + 1]:
+        if self._hudi['kezi']['z'][self._hudi['menfeng'] + 1]:
             fanpai_all.append({'name': '自風 ' + feng_hanzi[self._hudi['menfeng']], 'fanshu': 1})
         if self._hudi['kezi']['z'][5]:
             fanpai_all.append({'name': '翻牌 白', 'fanshu': 1})
@@ -522,6 +523,7 @@ class HupaiSolver:
         """純チャン"""
         if self._hudi['n_yaojiu'] == 5 and self._hudi['n_shunzi'] > 0 and self._hudi['n_zipai'] == 0:
             return [{'name': '純全帯ヤオ九', 'fanshu': (3 if self._hudi['menqian'] else 2)}]
+        return []
 
     def erbeikou(self):
         """二盃口"""
@@ -634,7 +636,7 @@ def get_hupai(
 
     # 役満の初期値を設定する。状況役に役満(天和、地和)が含まれている場合は
     # それを設定、ない場合は空配列で初期化する
-    damanguan = pre_hupai if (len(pre_hupai) > 0) and (pre_hupai[0]['fanshu'][0] == '*') else []
+    damanguan = pre_hupai if len(pre_hupai) > 0 and isinstance(pre_hupai[0]['fanshu'], str) else []
 
     # 役判定クラス
     hs = HupaiSolver(mianzi, hudi, rule)
@@ -693,7 +695,7 @@ def get_hupai(
     return hupai
 
 
-def get_post_hupai(shoupai: Shoupai, rongpai: str, baopai, fubaopai) -> list[dict[str, str | int]]:
+def get_post_hupai(shoupai: Shoupai, rongpai: str | None, baopai, fubaopai) -> list[dict[str, str | int]]:
     """懸賞役一覧の作成"""
 
     # 手牌に和了牌を加え、文字列系に変換する
@@ -750,13 +752,20 @@ def get_post_hupai(shoupai: Shoupai, rongpai: str, baopai, fubaopai) -> list[dic
 def get_defen(
     fu: int,
     hupai: list[dict[str, str | int]],
-    rongpai,
+    rongpai: str | None,
     param: dict[str, Any]
-):
+) -> dict[str, Any]:
     """和了点の計算"""
 
-    if len(hupai) > 0:
-        return {'defen': 0}     # 役なしの場合、打点 0 を返す
+    if len(hupai) == 0:     # 役なしの場合
+        return {
+            'hupai': None,
+            'fu': fu,
+            'fanshu': 0,
+            'damanguan': 0,
+            'defen': 0,
+            'fenpei': []
+        }
 
     menfeng = param['menfeng']
     fanshu = None
@@ -772,7 +781,7 @@ def get_defen(
     if isinstance(hupai[0]['fanshu'], str):     # 役満の場合
         fu = None   # 符はない
         # 役満複合数を決定する。役満の複合なしの場合は、1固定とする。
-        damanguan = 1 if not param['compound_damanguan'] else sum(map(lambda h: len(h['fanshu']), hupai))
+        damanguan = 1 if not param['rule']['compound_damanguan'] else sum(map(lambda h: len(h['fanshu']), hupai))
         base = 8000 * damanguan
 
         # パオ責任者がいる場合は責任対象の基本点を算出する
@@ -858,11 +867,28 @@ def get_defen(
     }
 
 
-def hule(shoupai: Shoupai, rongpai: str, param: dict):
+def hule(shoupai: Shoupai, rongpai: str | None, param: dict) -> dict[str, Any] | None:
+    """
+    和了情報の計算
+
+    Parameters
+    ----------
+    shoupai : Shoupai
+        手牌
+    rongpai : str or None
+        ロン牌の文字列表現
+    param : dict
+        点数計算に関する各種パラメータ
+
+    Returns
+    -------
+    h_max : dict (or None)
+        和了情報
+    """
 
     if rongpai:
         if not re.search(r'[\+\=\-]$', rongpai):
-            raise Exception(rongpai)
+            raise InvalidOperationError(rongpai)
         rongpai = rongpai[0:2] + rongpai[-1]
 
     h_max = None
@@ -877,7 +903,7 @@ def hule(shoupai: Shoupai, rongpai: str, param: dict):
     for mianzi in hule_mianzi(shoupai, rongpai):
 
         # 符を計算する
-        hudi = get_hudi(mianzi, param['zhuangfeng'], param['mengfeng'])
+        hudi = get_hudi(mianzi, param['zhuangfeng'], param['menfeng'])
 
         # 和了形を判定する
         hupai = get_hupai(mianzi, hudi, pre_hupai, post_hupai, param['rule'])
@@ -902,17 +928,17 @@ def hule_param(param: dict[str, Any] = {}):
     rv = {
         'rule': param.get('rule') or rule(),
         'zhuangfeng': param.get('zhuangfeng') or 0,
-        'menfeng': param.get('menfeng') or 1,
+        'menfeng': param['menfeng'] if 'menfeng' in param else 1,
         'hupai': {
             'lizhi': param.get('lizhi') or 0,
-            'yiva': param.get('yifa') or False,
+            'yifa': param.get('yifa') or False,
             'qianggang': param.get('qianggang') or False,
             'lingshang': param.get('lingshang') or False,
             'haidi': param.get('haidi') or 0,
             'tianhu': param.get('tianhu') or 0
         },
-        'baopai': [].extend(param.get('baopai')) if param.get('baopai') else [],
-        'fubaopai': [].extend(param.get('fubaopai')) if param.get('fubaopai') else [],
+        'baopai': [].extend(param['baopai']) if 'baopai' in param else [],
+        'fubaopai': [].extend(param['fubaopai']) if 'fubaopai' in param else [],
         'jicun': {
             'changbang': param.get('changbang') or 0,
             'lizhibang': param.get('lizhibang') or 0

@@ -10,6 +10,7 @@ from jongpy.core.xiangting import (xiangting_goushi,
 from jongpy.core.hule import (hule,
                               hule_mianzi,
                               hule_param)
+from jongpy.core.exceptions import JongPyError
 
 
 __all__ = [
@@ -23,4 +24,5 @@ __all__ = [
     'hule',
     'hule_mianzi',
     'hule_param',
+    'JongPyError',
 ]
