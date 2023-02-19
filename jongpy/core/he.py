@@ -11,7 +11,7 @@ from jongpy.core.exceptions import (PaiFormatError,
 class He:
     """河クラス"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._pai = []
         self._find = {}
 
@@ -35,5 +35,5 @@ class He:
         self._pai[len(self._pai) - 1] += d.group()
         return self
 
-    def find(self, p: str):
+    def find(self, p: str) -> bool | None:
         return self._find.get(p[0] + str(int(p[1]) or 5))
