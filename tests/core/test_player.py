@@ -439,3 +439,82 @@ class TestPlayerAllowNoDaopai:
         player = init_player({'rule': jongpy.rule({'declare_no_tingpai': True})})
         shoupai = jongpy.Shoupai.from_str('m123p456s789z1122')
         assert not player.allow_no_daopai(shoupai)
+
+
+class TestPlayerAction:
+    @pytest.fixture
+    def setup(self):
+        self._player = Player()
+        self._kaiju = {'kaiju': {
+            'id': 1, 'rule': jongpy.rule(), 'title': 'タイトル',
+            'player': ['自家', '下家', '対面', '上家'], 'qijia': 2
+        }}
+        self._qipai = {'qipai': {
+            'zhuangfeng': 1, 'jushu': 2, 'changbang': 3, 'lizhibang': 4,
+            'defen': [25000, 25000, 25000, 25000], 'baopai': 's5',
+            'shoupai': ['', 'm123p456s789z1234', '', '']
+        }}
+
+    def test_kaiju(self, setup):
+        self._player.action(self._kaiju)
+
+    def test_qipai(self, setup):
+        self._player.action(self._kaiju)
+        self._player.action(self._qipai)
+
+    def test_zimo(self, setup):
+        self._player.action(self._kaiju)
+        self._player.action(self._qipai)
+        self._player.action({'zimo': {'l': 0, 'p': 'm1'}})
+
+    def test_dapai(self, setup):
+        self._player.action(self._kaiju)
+        self._player.action(self._qipai)
+        self._player.action({'dapai': {'l': 0, 'p': 'm1'}})
+
+    def test_fulou(self, setup):
+        self._player.action(self._kaiju)
+        self._player.action(self._qipai)
+        self._player.action({'dapai': {'l': 0, 'p': 'm1'}})
+        self._player.action({'fulou': {'l': 1, 'm': 'm1-23'}})
+
+    def test_gang(self, setup):
+        self._player.action(self._kaiju)
+        self._player.action(self._qipai)
+        self._player.action({'gang': {'l': 2, 'm': 's1111'}})
+
+    def test_gangzimo(self, setup):
+        self._player.action(self._kaiju)
+        self._player.action(self._qipai)
+        self._player.action({'gang': {'l': 2, 'm': 's1111'}})
+        self._player.action({'gangzimo': {'l': 2, 'p': 's2'}})
+
+    def test_hule(self, setup):
+        self._player.action(self._kaiju)
+        self._player.action(self._qipai)
+        hule = {'hule': {
+            'l': 2,
+            'shoupai': 'p7p7,z111-,z222=,z333+,z444-',
+            'baojia': 3,
+            'fubaopai': None,
+            'damanguan': 2,
+            'defen': 64000,
+            'hupai': [{'name': '大四喜', 'fanshu': '**', 'baojia': 0}],
+            'fenpai': [-32000, 0, 64000, -32000]
+        }}
+        self._player.action(hule)
+
+    def test_pingju(self, setup):
+        self._player.action(self._kaiju)
+        self._player.action(self._qipai)
+        pingju = {'pingju': {
+            'name': '荒牌平局',
+            'shoupai': ['', 'p2234406z333555', '', 'p11223346777z77'],
+            'fenpai': [-1500, 1500, -1500, 1500]
+        }}
+        self._player.action(pingju)
+
+    def test_jieju(self, setup):
+        self._player.action(self._kaiju)
+        self._player.action(self._qipai)
+        self._player.action({'jieju': {'defen': [None, None, None, None]}})
