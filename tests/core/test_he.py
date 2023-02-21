@@ -1,6 +1,6 @@
 import pytest
 
-from jongpy.core.he import He
+from jongpy.core import He
 from jongpy.core.exceptions import (PaiFormatError,
                                     MianziFormatError,
                                     InvalidOperationError)

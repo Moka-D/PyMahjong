@@ -1,7 +1,7 @@
 import pytest
 
-from jongpy.core.shan import Shan
-from jongpy.core.rule import rule
+from jongpy.core import Shan
+from jongpy.core import rule
 from jongpy.core.exceptions import PaiFormatError, InvalidOperationError
 
 

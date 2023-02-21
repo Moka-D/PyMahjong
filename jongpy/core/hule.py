@@ -902,7 +902,7 @@ def hule(shoupai: Shoupai, rongpai: str | None, param: dict) -> dict[str, Any] |
     pre_hupai = get_pre_hupai(param['hupai'])
 
     # 懸賞役の一覧を作成
-    post_hupai = get_post_hupai(shoupai, rongpai, param['baopai'], param['fubaopai'])
+    post_hupai = get_post_hupai(shoupai, rongpai, param['baopai'], param.get('fubaopai'))
 
     # 和了形を求め、すべての和了形について以下を実行する
     for mianzi in hule_mianzi(shoupai, rongpai):

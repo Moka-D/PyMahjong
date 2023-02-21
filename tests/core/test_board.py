@@ -1,6 +1,6 @@
 import pytest
 
-from jongpy.core.board import Board
+from jongpy.core import Board
 
 
 def init_board():

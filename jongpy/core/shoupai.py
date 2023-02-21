@@ -15,11 +15,6 @@ from jongpy.core.exceptions import (InvalidOperationError,
 class Shoupai:
     """手牌クラス"""
 
-    _bingpai: dict[str, int | list[int]]
-    _fulou: list[str]
-    _zimo: str | None
-    _lizhi: bool
-
     @staticmethod
     def valid_pai(p: str) -> str | None:
         """

@@ -8,12 +8,13 @@ from jongpy.core.he import He
 
 
 class Shan:
-    def __init__(self, baopai: str):
+
+    def __init__(self, baopai: str | None):
         self.paishu = 136 - 13 * 4 - 14
         self.baopai = [baopai]
         self.fubaopai = None
 
-    def zimo(self, p: str | None):
+    def zimo(self, p: str | None = None):
         self.paishu -= 1
         return p or '_'
 
@@ -23,22 +24,6 @@ class Shan:
 
 class Board:
     """卓定義クラス"""
-
-    title: str
-    player: list[str]
-    qijia: int
-    zhuangfeng: int
-    jushu: int
-    changbang: int
-    lizhibang: int
-    defen: list[int | None]
-    shan: Shan | None
-    shoupai: list[Shoupai | None]
-    he: list[He | None]
-    player_id: list[int]
-    lunban: int
-    _lizhi: bool | None
-    _fenpei: list[int] | None
 
     def __init__(self, kaiju: dict[str, Any] | None = None):
         if kaiju is not None:

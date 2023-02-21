@@ -1,13 +1,12 @@
 import pytest   # noqa
 import json
 
-from jongpy.core.shoupai import Shoupai
-from jongpy.core.xiangting import (xiangting_yiban,
-                                   xiangting_qidui,
-                                   xiangting_goushi,
-                                   xiangting,
-                                   tingpai,
-                                   XIANGTING_INF)
+from jongpy.core import (Shoupai, xiangting_yiban,
+                         xiangting_qidui,
+                         xiangting_goushi,
+                         xiangting,
+                         tingpai)
+from jongpy.core.xiangting import XIANGTING_INF
 
 
 class TestXiangtingYiban:

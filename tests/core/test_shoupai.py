@@ -1,7 +1,7 @@
 import pytest
 import copy
 
-from jongpy.core.shoupai import Shoupai
+from jongpy.core import Shoupai
 from jongpy.core.exceptions import (PaiFormatError,
                                     PaiOverFlowError,
                                     PaiNotExistError,

@@ -1,10 +1,8 @@
 import pytest   # noqa
 import json
 
-from jongpy.core.shoupai import Shoupai
-from jongpy.core.hule import hule_mianzi, hule
-from jongpy.core.hule import hule_param as param
-from jongpy.core.rule import rule
+from jongpy.core import Shoupai, hule_mianzi, hule, rule
+from jongpy.core import hule_param as param
 from jongpy.core.exceptions import InvalidOperationError
 
 
