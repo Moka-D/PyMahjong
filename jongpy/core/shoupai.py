@@ -1,6 +1,5 @@
 """jongpy.core.shoupai"""
 
-import copy
 import re
 
 from jongpy.core.exceptions import (InvalidOperationError,
@@ -235,12 +234,12 @@ class Shoupai:
         # インスタンス変数をコピーする
         shoupai._bingpai = {
             '_': self._bingpai['_'],
-            'm': copy.deepcopy(self._bingpai['m']),
-            'p': copy.deepcopy(self._bingpai['p']),
-            's': copy.deepcopy(self._bingpai['s']),
-            'z': copy.deepcopy(self._bingpai['z'])
+            'm': self._bingpai['m'][:],
+            'p': self._bingpai['p'][:],
+            's': self._bingpai['s'][:],
+            'z': self._bingpai['z'][:]
         }
-        shoupai._fulou = copy.deepcopy(self._fulou)
+        shoupai._fulou = self._fulou[:]
         shoupai._zimo = self._zimo
         shoupai._lizhi = self._lizhi
 
@@ -262,12 +261,12 @@ class Shoupai:
         # 生成したインスタンスからインスタンス変数をコピーする
         self._bingpai = {
             '_': shoupai._bingpai['_'],
-            'm': copy.deepcopy(shoupai._bingpai['m']),
-            'p': copy.deepcopy(shoupai._bingpai['p']),
-            's': copy.deepcopy(shoupai._bingpai['s']),
-            'z': copy.deepcopy(shoupai._bingpai['z'])
+            'm': shoupai._bingpai['m'][:],
+            'p': shoupai._bingpai['p'][:],
+            's': shoupai._bingpai['s'][:],
+            'z': shoupai._bingpai['z'][:]
         }
-        self._fulou = copy.deepcopy(shoupai._fulou)
+        self._fulou = shoupai._fulou[:]
         self._zimo = shoupai._zimo
         self._lizhi = shoupai._lizhi
 

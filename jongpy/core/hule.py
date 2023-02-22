@@ -942,8 +942,8 @@ def hule_param(param: dict[str, Any] = {}):
             'haidi': param.get('haidi') or 0,
             'tianhu': param.get('tianhu') or 0
         },
-        'baopai': param.get('baopai') or [],
-        'fubaopai': param.get('fubaopai') or [],
+        'baopai': param['baopai'][:] if 'baopai' in param else [],
+        'fubaopai': param['fubaopai'][:] if 'fubaopai' in param else [],
         'jicun': {
             'changbang': param.get('changbang') or 0,
             'lizhibang': param.get('lizhibang') or 0

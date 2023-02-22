@@ -1,6 +1,7 @@
 """jongpy.core.shan"""
 
 import random
+import copy
 from collections import deque
 from typing import Any
 
@@ -130,4 +131,4 @@ class Shan:
     @property
     def fubaopai(self) -> list[str] | None:
         """裏ドラ表示牌"""
-        return None if not self._closed else self._fubaopai
+        return None if not self._closed else copy.copy(self._fubaopai)

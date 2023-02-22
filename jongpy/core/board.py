@@ -39,10 +39,10 @@ class Board:
         self.jushu = 0
         self.changbang = 0
         self.lizhibang = 0
-        self.defen = [None, None, None, None]
+        self.defen = [None] * 4
         self.shan = None
-        self.shoupai = [None, None, None, None]
-        self.he = [None, None, None, None]
+        self.shoupai = [None] * 4
+        self.he = [None] * 4
         self.player_id = [0, 1, 2, 3]
         self.lunban = -1
 
