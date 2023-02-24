@@ -1,7 +1,6 @@
 """jongpy.core.hule"""
 
 import re
-import copy
 import math
 from typing import Any
 from jongpy.core.shoupai import Shoupai
@@ -94,7 +93,7 @@ def add_hulepai(mianzi: list[str], p: str) -> list[list[str]]:
         m = re.sub(regexp, replacer, mianzi[i])     # 置換を試みる
         if m == mianzi[i]:  # 出来なければ次へ
             continue
-        tmp_mianzi = copy.deepcopy(mianzi)  # 和了形を複製する
+        tmp_mianzi = mianzi[:]  # 和了形を複製する
         tmp_mianzi[i] = m   # マークした面子と置き換える
         new_mianzi.append(tmp_mianzi)
 
@@ -221,7 +220,7 @@ def hule_mianzi(shoupai: Shoupai, rongpai: str | None = None) -> list[list[str]]
         和了形の候補一覧
     """
 
-    new_shoupai = copy.copy(shoupai)    # 手牌をコピー
+    new_shoupai = shoupai.clone()   # 手牌をコピー
     if rongpai:
         new_shoupai.zimo(rongpai)   # ロン牌はツモとして手牌に加える
 
@@ -704,7 +703,7 @@ def get_post_hupai(
     """懸賞役一覧の作成"""
 
     # 手牌に和了牌を加え、文字列系に変換する
-    new_shoupai = copy.copy(shoupai)
+    new_shoupai = shoupai.clone()
     if rongpai:
         new_shoupai.zimo(rongpai)
     paistr = str(new_shoupai)
