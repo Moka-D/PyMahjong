@@ -100,16 +100,26 @@ class Game:
         self._handler = callback
 
     def add_paipu(self, paipu: dict):
-        pass
+        self._paipu['log'].append(paipu)
 
-    def delay(self, callback: Callable, timeout: int | None):
-        pass
+    def delay(self, callback: Callable, timeout: int | None = None):
+
+        if self._sync:
+            return callback()
+
+        timeout = (0 if self._speed == 0
+                   else max(500, self._speed * 200) if timeout is None
+                   else timeout)
+        # setTimeout(callback, timeout)
 
     def stop(self, callback: Callable):
         self._stop = callback
 
     def start(self):
-        pass
+        if self._timeout_id:
+            return
+        self._stop = None
+        # self._timeout_id = setTimeout(lambda: self.next(), 0)
 
     def notify_players(self, type: str, msg: list[dict]):
         """
@@ -130,6 +140,7 @@ class Game:
                 # 同期モードの場合は直接 action メソッドを呼び出す
                 self._players[id].action(msg[i])
             else:
+                # setTimeout(lambda: self._players[id].action(msg[i]), 0)
                 pass
 
     def call_players(self, type: str, msg: list[dict], timeout: int | None = None):
@@ -167,6 +178,7 @@ class Game:
                 pass
 
         if not self._sync:
+            # self._timeout_id = setTimeout(lambda: self.next(), timeout)
             pass
 
     def reply(self, id: int, reply: dict | None = None):
@@ -191,6 +203,7 @@ class Game:
         if len([x for x in self._reply if x]) < 4:
             return
         if not self._timeout_id:
+            # self._timeout_id = setTimeout(lambda: self.next(), 0)
             pass
 
     def next(self):
@@ -441,7 +454,7 @@ class Game:
             self._yifa[model['lunban']] = self._rule['yifa']    # 一発アリルールならフラグをONに
 
         if (xiangting(model['shoupai'][model['lunban']]) == 0
-                and (p for p in tingpai(model['shoupai'][model['lunban']]) if model['he'][model['lunban']].find(p))):
+                and any(map(lambda p: model['he'][model['lunban']].find(p), tingpai(model['shoupai'][model['lunban']])))):
             self._neng_rong[model['lunban']] = False    # フリテン判断する
 
         self._dapai = dapai     # 最後の打牌を保存
@@ -806,6 +819,7 @@ class Game:
             self._view.update(paipu)
 
     def last(self):
+
         model = self._model
 
         # (必要であれば)描画を指示する
@@ -885,7 +899,7 @@ class Game:
         self._paipu['rank'] = rank
 
         # 順位点を加えたポイントを計算し、牌譜に設定する
-        round_ = not any([p for p in self._rule['rank_bounus'] if re.search(r'\.\d$', p)])
+        round_ = not any(map(lambda p: re.search(r'\.\d$', p), self._rule['rank_bounus']))
         point = [0] * 4
         for i in range(1, 4):
             id = paiming[i]
