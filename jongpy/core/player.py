@@ -23,27 +23,27 @@ class Player(metaclass=ABCMeta):
 
         self._callback = callback
 
-        if msg.get('kaiju'):
+        if 'kaiju' in msg:
             self.kaiju(msg['kaiju'])
-        elif msg.get('qipai'):
+        elif 'qipai' in msg:
             self.qipai(msg['qipai'])
-        elif msg.get('zimo'):
+        elif 'zimo' in msg:
             self.zimo(msg['zimo'])
-        elif msg.get('dapai'):
+        elif 'dapai' in msg:
             self.dapai(msg['dapai'])
-        elif msg.get('fulou'):
+        elif 'fulou' in msg:
             self.fulou(msg['fulou'])
-        elif msg.get('gang'):
+        elif 'gang' in msg:
             self.gang(msg['gang'])
-        elif msg.get('gangzimo'):
+        elif 'gangzimo' in msg:
             self.zimo(msg['gangzimo'], True)
-        elif msg.get('kaigang'):
+        elif 'kaigang' in msg:
             self.kaigang(msg['kaigang'])
-        elif msg.get('hule'):
+        elif 'hule' in msg:
             self.hule(msg['hule'])
-        elif msg.get('pingju'):
+        elif 'pingju' in msg:
             self.pingju(msg['pingju'])
-        elif msg.get('jieju'):
+        elif 'jieju' in msg:
             self.jieju(msg['jieju'])
 
     @property
@@ -266,11 +266,11 @@ class Player(metaclass=ABCMeta):
         return Game.allow_hule_(self._rule, shoupai, p, self._model.zhuangfeng, self._menfeng, hupai, self._neng_rong)
 
     def allow_pingju(self, shoupai: Shoupai):
-        """流局可能かどうか"""
+        """九種九牌流局可能かどうか"""
         return Game.allow_pingju_(self._rule, shoupai, self._diyizimo)
 
     def allow_no_daopai(self, shoupai: Shoupai):
-        """倒牌可能かどうか"""
+        """ノーテン宣言可能かどうか"""
         return Game.allow_no_daopai(self._rule, shoupai, self.shan.paishu)
 
     @ abstractclassmethod

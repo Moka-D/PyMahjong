@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import re
 import datetime
-import copy
 import random
 import json
 from typing import Callable, Any, TYPE_CHECKING
@@ -156,7 +155,7 @@ class Game:
         self._status = type
 
         # 応答を保存する配列を初期化
-        self._reply = [None] * 4
+        self._reply = [{}] * 4
 
         # 東家から順に対局者にメッセージを送信する
         for i in range(4):
@@ -629,7 +628,7 @@ class Game:
                    else (self._gang[0] + self._gang[-1] if self._hule_option == 'qianggang'
                          else self._dapai[0:2]) + '_+=-'[(4 + model['lunban'] - menfeng) % 4])
 
-        shoupai = copy.copy(model['shoupai'][menfeng])  # 和了者の手牌を複製
+        shoupai = model['shoupai'][menfeng].clone()     # 和了者の手牌を複製
         fubaopai = model['shan'].fubaopai if shoupai.lizhi else None    # リーチしている場合は裏ドラを取得
 
         # 和了点の計算に必要な手牌以外の情報(状況役など)を収集する
@@ -807,147 +806,703 @@ class Game:
             self._view.update(paipu)
 
     def last(self):
-        pass
+        model = self._model
+
+        # (必要であれば)描画を指示する
+        model['lunban'] = -1
+        if self._view is not None:
+            self._view.update()
+
+        # 連荘でなければ次の局に進む
+        if not self._lianzhuang:
+            model['jushu'] += 1
+            model['zhuangfeng'] += (model['jushu'] / 4) | 0
+            model['jushu'] = model['jushu'] % 4
+
+        # 持ち点30,000点以上で持ち点最大の対局者を guanjun に設定する
+        # 持ち点同点の場合は起家に近い対局者を上位とする
+        jieju = False
+        guanjun = -1
+        defen = model['defen']
+        for i in range(4):
+            id = (model['qijia'] + i) % 4
+            if defen[id] < 0 and self._rule['minus_interruption']:
+                jieju = True    # トビ終了
+            if defen[id] >= 30000 and (guanjun < 0 or defen[id] > defen[guanjun]):
+                guanjun = id
+
+        sum_jushu = model['zhuangfeng'] * 4 + model['jushu']
+
+        if 15 < sum_jushu:
+            jieju = True    # 「返り東」には入らない
+        elif (self._rule['n_zhuang'] + 1) * 4 - 1 < sum_jushu:
+            jieju = True    # 4局を超えた延長戦は行わない
+        elif self._max_jushu < sum_jushu:   # 最終局を超えた場合
+            if self._rule['extra_game_method'] == 0:
+                jieju = True    # 延長戦なしなら終局
+            elif self._rule['n_zhuang'] == 0:
+                jieju = True    # 一局戦なら終局
+            elif guanjun >= 0:
+                jieju = True    # 30,000点越えがいるなら終局
+            else:   # さらに延長戦を続ける
+                self._max_jushu += (4 if self._rule['extra_game_method']    # 4局固定延長の場合
+                                                                            # 最終局を4局先に延ばす
+                                    else 1 if self._rule['extra_game_method']   # 連荘優先サドンデスの場合
+                                                                                # 1局先に延ばす
+                                    else 0)     # その他の場合、延長しない
+        elif self._max_jushu == sum_jushu:  # 最終局の場合
+            if self._rule['stop_last_game'] and guanjun == model['player_id'][0] and self._lianzhuang and not self._no_game:
+                jieju = True    # オーラス止めの条件を満たせば終局
+
+        if jieju:
+            self.delay(lambda: self.jieju(), 0)     # (終局の場合)終局処理を行う
+        else:
+            self.delay(lambda: self.qipai(), 0)     # (その他なら)配牌に遷移する
 
     def jieju(self):
-        pass
 
-    def get_reply(self, i):
-        pass
+        model = self._model
+
+        # 持ち点により着順を決定する。同点の場合は起家に近い方を上位とする
+        paiming = []
+        defen = model['defen']
+        for i in range(4):
+            id = (model['qijia'] + i) % 4
+            for j in range(4):
+                if j == len(paiming) or defen[id] > defen[paiming[j]]:
+                    paiming.insert(j, id)
+                    break
+        # 積み残しの供託リーチ棒はトップの点に加算する
+        defen[paiming[0]] += model['lizhibang'] * 1000
+
+        # 牌譜に終了時の持ち点を設定する
+        self._paipu['defen'] = defen
+
+        # 牌譜に着順を設定する
+        rank = [0] * 4
+        for i in range(4):
+            rank[paiming[i]] = i + 1
+        self._paipu['rank'] = rank
+
+        # 順位点を加えたポイントを計算し、牌譜に設定する
+        round_ = not any([p for p in self._rule['rank_bounus'] if re.search(r'\.\d$', p)])
+        point = [0] * 4
+        for i in range(1, 4):
+            id = paiming[i]
+            point[id] = (defen[id] - 30000) / 1000 + float(self._rule['rank_bounus'][i])
+            if round_:
+                point[id] = round(point[id])
+            point[paiming[0]] -= point[id]
+        self._paipu['point'] = list(map(lambda p: round(p, 0) if round_ else round(p, 1)))
+
+        # 対局者に通知メッセージを送信する
+        paipu = {'jieju': self._paipu}
+        msg = [{}] * 4
+        for i in range(4):
+            msg[i] = json.load(json.dump(paipu))
+        self.call_players('jieju', msg, self._wait)
+
+        # (必要であれば)描画を指示する
+        if self._view is not None:
+            self._view.summary(self._paipu)
+
+        # 終局前のハンドラがある場合は、それを呼び出す
+        if self._handler is not None:
+            self._handler()
+
+    def get_reply(self, i: int) -> dict | None:
+        model = self._model
+        return self._reply[model['player_id'][i]]
 
     def reply_kaiju(self):
-        pass
+        self.delay(lambda: self.qipai(), 0)     # 配牌に遷移
 
     def reply_qipai(self):
-        pass
+        self.delay(lambda: self.zimo(), 0)  # ツモに遷移
 
-    def reply_zimo(self):
-        pass
+    def reply_zimo(self) -> None:
 
-    def reply_dapai(self):
-        pass
+        model = self._model
 
-    def reply_fulou(self):
-        pass
+        # 現在の応答を取得する
+        reply = self.get_reply(model['lunban'])
 
-    def reply_gang(self):
-        pass
+        if 'daopai' in reply:     # 応答が倒牌の場合
+            if self.allow_pingju():     # 九種九牌で流局が可能な場合
+                shoupai = [''] * 4
+                # 現在の手番の手牌を公開する
+                shoupai[model['lunban']] = str(model['shoupai'][model['lunban']])
+                # 九種九牌の流局に遷移する
+                return self.delay(lambda: self.pingju('九種九牌', shoupai), 0)
 
-    def reply_hule(self):
-        pass
+        elif 'hule' in reply:     # 応答が和了の場合
+            if self.allow_hule():   # 和了が可能な場合
+                if self._view is not None:
+                    self._view.say('zimo', model['lunban'])     # (必要なら)「ツモ」と発声する
+                return self.delay(lambda: self.hule())  # 和了に遷移する
 
-    def reply_pingju(self):
-        pass
+        elif 'gang' in reply:     # 応答が槓の場合
+            if reply['gang'] in self.get_gang_mianzi():   # カンが可能な場合
+                if self._view is not None:
+                    self._view.say('gang', model['lunban'])     # (必要なら)「カン」と発声する
+                return self.delay(lambda: self.gang(reply['gang']))     # 槓に遷移する
+
+        elif 'dapai' in reply:    # 応答が打牌の場合
+            dapai = re.sub(r'\*$', '', reply['dapai'])
+            if dapai in self.get_dapai():     # 可能な打牌の場合
+                if reply['dapai'][-1] == '*' and self.allow_lizhi(dapai):
+                    # 打牌が'可能な)リーチ宣言の場合
+                    if self._view is not None:
+                        self._view.say('lizhi', model['lunban'])    # (必要なら)「リーチ」と発声する
+                    return self.delay(lambda: self.dapai(reply['dapai']))   # 打牌に遷移
+                return self.delay(lambda: self.dapai(dapai), 0)     # 打牌に遷移
+
+        # 応答が不正な場合、手牌の一番右にある牌を打牌する
+        p = self.get_dapai().pop()
+        self.delay(lambda: self.dapai(p), 0)
+
+    def reply_dapai(self) -> None:
+
+        model = self._model
+
+        # 下家→対面→上家の順に和了応答を処理する
+        for i in range(1, 4):
+            j = (model['lunban'] + i) % 4
+            reply = self.get_reply(j)
+            if 'hule' in reply and self.allow_hule(j):  # 応答が和了の場合
+                if self._rule['n_max_simultaneous_hule'] == 1 and len(self._hule):
+                    # ダブロンなしの場合、2人目以降の和了応答は処理しない
+                    continue
+                if self._view is not None:
+                    self._view.say('rong', j)   # (必要なら)「ロン」と発声する
+                self._hule.append(j)    # 和了者に追加する
+            else:
+                shoupai = model['shoupai'][j].clone().zimo(self._dapai)
+                if xiangting(shoupai) == -1:
+                    # 打牌で和了形となる場合はフリテンとする
+                    self._neng_rong[j] = False
+
+        # 和了応答があった場合の処理を行う
+        # ダブロンありで3人和了の場合
+        if len(self._hule) == 3 and self._rule['n_max_simultaneous_hule'] == 2:
+            shoupai = [''] * 4
+            for i in self._hule:    # 和了者の手牌を公開する
+                shoupai[i] = str(model['shoupai'][i])
+            # 三家和のと途中流局に遷移
+            return self.delay(lambda: self.pingju('三家和', shoupai))
+        elif len(self._hule):   # それ以外の場合
+            return self.delay(lambda: self.hule())  # 和了に遷移
+
+        # リーチ宣言後の場合、リーチ成立の処理をする
+        if self._dapai[-1] == '*':
+            model['defen'][model['player_id'][model['lunban']]] -= 1000     # 持ち点を1000点減らす
+            model['lizhibang'] += 1     # 供託リーチ棒を追加する
+
+            # 途中流局ありで4人目リーチの場合
+            if len([x for x in self._lizhi if x]) == 4 and self._rule['interrupted_pingju']:
+                shoupai = list(map(lambda s: str(s), model['shoupai']))     # 全員の手牌を公開
+                # 4人立直の途中流局に遷移
+                return self.delay(lambda: self.pingju('四家立直', shoupai))
+
+        # 北家の打牌で第1ツモ巡は終了する
+        if self._diyizimo and model['lunban'] == 3:
+            self._diyizimo = False  # 第1ツモ巡を終了
+            if self._fengpai:   # 四風連打が継続していた場合
+                # 四風連打の途中流局に遷移
+                return self.delay(lambda: self.pingju('四風連打'), 0)
+
+        # 4つ目のカンの場合の処理を行う
+        if sum(self._n_gang) == 4:
+            # 途中流局ありで1人が4つカンしていない場合
+            if max(self._n_gang) < 4 and self._rule['interrupted_pingju']:
+                # 四開槓の途中流局に遷移
+                return self.delay(lambda: self.pingju('四開槓'), 0)
+
+        # 牌山が尽きた場合の処理
+        if not model['shan'].paishu:
+            shoupai = [''] * 4
+            for i in range(4):
+                reply = self.get_reply(i)
+                if 'daopai' in reply:
+                    shoupai[i] = reply['daopai']    # 応答が倒牌の手牌を公開する
+            return self.delay(lambda: self.pingju('', shoupai), 0)  # 流局に遷移
+
+        # 下家→対面→上家の順にカン応答・ポン応答を処理する
+        for i in range(1, 4):
+            j = (model['lunban'] + i) % 4
+            reply = self.get_reply(j)
+            if 'fulou' in reply:
+                m = reply['fulou'].replace('0', '5')
+                if re.search(r'^[mpsz](\d)\1\1\1', m):  # カン応答の場合
+                    if reply['fulou'] in self.get_gang_mianzi(j):   # カンが可能な場合
+                        if self._view is not None:
+                            self._view.say('gang', j)   # (必要なら)「カン」と発声する
+                        return self.delay(lambda: self.fulou(reply['fulou']))   # 副露に遷移
+                elif re.search(r'^[mpsz](\d)\1\1', m):  # ポン応答の場合
+                    if reply['fulou'] in self.get_peng_mianzi(j):   # ポンが可能な場合
+                        if self._view is not None:
+                            self._view.say('peng', j)   # (必要なら)「ポン」と発声する
+                        return self.delay(lambda: self.fulou(reply['fulou']))   # 副露に遷移
+
+        # 下家のチー応答を処理する
+        i = (model['lunban'] + 1) % 4
+        reply = self.get_reply(i)
+        if 'fulou' in reply:    # チー応答の場合
+            if reply['fulou'] in self.get_chi_mianzi(i):    # チーが可能な場合
+                if self._view is not None:
+                    self._view.say('chi', i)    # (必要なら)「チー」と発声する
+                return self.delay(lambda: self.fulou(reply['fulou']))
+
+        # それ以外の場合、自摸に遷移する
+        self.delay(lambda: self.zimo(), 0)
+
+    def reply_fulou(self) -> None:
+
+        model = self._model
+
+        # 副露がカンの場合は打牌せず槓自摸に遷移する
+        if self._gang:
+            return self.delay(lambda: self.gangzimo(), 0)
+
+        # 副露がポン・チーの場合は打牌する
+        reply = self.get_reply(model['lunban'])
+        if 'dapai' in reply:    # 応答が打牌の場合
+            if reply['dapai'] in self.get_dapai():  # 可能な打牌の場合
+                return self.delay(lambda: self.dapai(reply['dapai']), 0)    # 打牌に遷移
+
+        # 応答が不正な場合、手牌の一番右にある牌を打牌する
+        p = self.get_dapai().pop()
+        self.delay(lambda: self.dapai(p), 0)
+
+    def reply_gang(self) -> None:
+
+        model = self._model
+
+        # 明槓は槍槓できないので、即座に槓自摸に遷移する
+        if re.search(r'^[mpsz]\d{4}$', self._gang):
+            return self.delay(lambda: self.gangzimo(), 0)
+
+        # 加槓は槍槓可能なので、下家→対面→上家の順に和了応答を処理する
+        for i in range(1, 4):
+            j = (model['lunban'] + i) % 4
+            reply = self.get_reply(j)
+            if 'hule' in reply and self.allow_hule(j):  # 応答が和了の場合
+                if self._rule['n_max_simultaneous_hule'] == 1 and len(self._hule):
+                    # ダブロンなしの場合、2人目以降の和了応答は処理しない
+                    continue
+                if self._view is not None:
+                    self._view.say('rong', j)   # (必要なら)「ロン」と発声する
+                self._hule.append(j)    # 和了者に追加する
+            else:   # 応答が和了でない場合
+                p = self._gang[0] + self._gang[-1]
+                shoupai = model['shoupai'][j].clone().zimo(p)
+                if xiangting(shoupai) == -1:
+                    # カンの牌で和了形となる場合はフリテンとする
+                    self._neng_rong[j] = False
+
+        # 和了応答があった場合の処理を行う
+        if len(self._hule):
+            return self.delay(lambda: self.hule())  # 和了に遷移する
+
+        # それ以外の場合、槓自摸に遷移する
+        self.delay(lambda: self.gangzimo(), 0)
+
+    def reply_hule(self) -> None:
+
+        model = self._model
+
+        # 和了者の収支を持ち点に反映する
+        for i in range(4):
+            model['defen'][model['player_id'][i]] += self._fenpei[i]
+        # 供託をクリアする
+        model['changbang'] = 0
+        model['lizhibang'] = 0
+
+        if len(self._hule):     # 続く和了がある場合
+            return self.delay(self.hule())  # 和了に遷移する
+        else:   # 和了がない場合
+            if self._lianzhuang:    # 連荘の場合
+                # 局開始時の状態の積み棒に1加算する
+                model['changbang'] = self._changbang + 1
+            return self.delay(lambda: self.last(), 0)   # 終局判断する
+
+    def reply_pingju(self) -> None:
+
+        model = self._model
+
+        # 流局時の収支を持ち点に反映する
+        for i in range(4):
+            model['defen'][model['player_id'][i]] += self._fenpei[i]
+        # 積み棒を加算する
+        model['changbang'] += 1
+
+        # 終局判断する
+        self.delay(lambda: self.last(), 0)
 
     def get_dapai(self):
-        pass
+        """
+        打牌可能な牌の一覧
 
-    def get_chi_mianzi(self, i):
-        pass
+        Returns
+        -------
+        list[str] (or None)
+            牌の配列
+        """
+        model = self._model
+        return Game.get_dapai_(self._rule, model['shoupai'][model['lunban']])
 
-    def get_peng_mianzi(self, i):
-        pass
+    def get_chi_mianzi(self, i: int):
+        """
+        チー可能な面子の一覧
 
-    def get_gang_mianzi(self, i):
-        pass
+        Parameters
+        ----------
+        i : int
+            手番
 
-    def allow_lizhi(self, p):
-        pass
+        Returns
+        -------
+        list[str] (or None)
+            面子の配列
+        """
+        model = self._model
+        d = '_+=-'[(4 + model['lunban'] - i) % 4]
+        return Game.get_chi_mianzi_(self._rule, model['shoupai'][i],
+                                    self._dapai + d, model['shan'].paishu)
 
-    def allow_hule(self, i):
-        pass
+    def get_peng_mianzi(self, i: int):
+        """
+        ポン可能な面子の一覧
+
+        Parameters
+        ----------
+        i : int
+            手番
+
+        Returns
+        -------
+        list[str] (or None)
+            面子の配列
+        """
+        model = self._model
+        d = '_+=-'[(4 + model['lunban'] - i) % 4]
+        return Game.get_peng_mianzi_(self._rule, model['shoupai'][i],
+                                     self._dapai + d, model['shan'].paishu)
+
+    def get_gang_mianzi(self, i: int | None = None):
+        """
+        カン可能な面子の一覧
+
+        Parameters
+        ----------
+        i : int (or None, default None)
+            手番
+            指定しない場合は暗槓・加槓を対象に、指定する場合は大明槓を対象とする
+
+        Returns
+        -------
+        list[str] (or None)
+            面子の配列
+        """
+        model = self._model
+        if i is None:   # 暗槓・加槓の場合
+            return Game.get_gang_mianzi_(self._rule, model['shoupai'][model['lunban']],
+                                         None, model['shan'].paishu,
+                                         sum(self._n_gang))
+        else:   # 大明槓の場合
+            d = '_+=-'[(4 + model['lunban'] - i) % 4]
+            return Game.get_gang_mianzi_(self._rule, model['shoupai'][i],
+                                         self._dapai + d, model['shan'].paishu,
+                                         sum(self._n_gang))
+
+    def allow_lizhi(self, p: str | None = None):
+        """
+        リーチ可能かどうか判定する
+
+        Parameters
+        ----------
+        p : str (or None)
+            牌
+
+        Returns
+        -------
+        list[str] or bool
+            ``p``が指定されていない場合、リーチ可能な牌の一覧を返す
+            リーチできる牌がない場合、または``p``が指定されている場合、リーチ可能かどうかを返す
+        """
+        model = self._model
+        return Game.allow_lizhi_(self._rule, model['shoupai'][model['lunban']],
+                                 p, model['shan'].paishu,
+                                 model['defen'][model['player_id'][model['lunban']]])
+
+    def allow_hule(self, i: int | None = None):
+        """
+        和了可能かどうか判定する
+
+        Parameters
+        ----------
+        i : int (or None)
+            手番
+            `None`の場合は現在手番のツモ和了について評価する
+
+        Returns
+        -------
+        bool
+            和了可能かどうか
+        """
+        model = self._model
+        if i is None:   # 現在の手番がツモ和了可能か判定する
+            # 状況役の有無を判定する
+            hupai = (model['shoupai'][model['lunban']].lizhi    # 立直
+                     or self._status == 'gangzimo'  # 嶺上開花
+                     or model['shan'].paishu == 0)  # 海底自摸
+            # ツモ和了可能か判定する
+            return Game.allow_hule_(self._rule,
+                                    model['shoupai'][model['lunban']], None,
+                                    model['zhuangfeng'], model['lunban'], hupai)
+        else:   # 手番 i がロン和了可能か判定する
+            # 和了牌を決定する
+            # 槍槓の場合は最後にカンした面子 _gang から、
+            # その他の場合は最後に打牌した牌 _dapai から決定する
+            p = self._gang[0] + self._gang[-1] if self._status == 'gang' else self._dapai
+            # 状況役の有無を判定する
+            hupai = (model['shoupai'][i].lizhi      # 立直
+                     or self._status == 'gangzimo'  # 嶺上開花
+                     or model['shan'].paishu == 0)  # 海底自摸
+            # ロン和了可能か判定する
+            return Game.allow_hule_(self._rule,
+                                    model['shoupai'][i], p,
+                                    model['zhuangfeng'], i, hupai,
+                                    self._neng_rong[i])
 
     def allow_pingju(self):
-        pass
+        """
+        現在の手番が九種九牌流局可能か判定する
+
+        Returns
+        -------
+        bool
+            現在の手番が九牌流局可能かどうか
+        """
+        model = self._model
+        return Game.allow_pingju_(self._rule, model['shoupai'][model['lunban']],
+                                  self._diyizimo)
 
     @staticmethod
     def get_dapai_(rule_: dict[str, Any], shoupai: Shoupai):
+        """
+        打牌可能な牌の一覧
 
+        Parameters
+        ----------
+        rule_ : dict
+            ルール
+        shoupai : jongpy.core.Shoupai
+            手牌
+
+        Returns
+        -------
+        list[str] (or None)
+            牌の配列
+        """
+
+        # 喰い替えなしの場合は Shoupai に処理を任せる
         if rule_['allow_fulou_slide'] == 0:
             return shoupai.get_dapai(True)
+
+        # 現物喰い替えなしの場合はここで喰い替えをチェックする
         if rule_['allow_fulou_slide'] == 1 and shoupai._zimo and len(shoupai._zimo) > 2:
             deny = shoupai._zimo[0] + str(int(re.search(r'\d(?=[\+\=\-])', shoupai._zimo).group()) or 5)
             return [p for p in shoupai.get_dapai(False) if p.replace('0', '5') != deny]
+
+        # 食い替えありの場合は Shoupai でチェックしない
         return shoupai.get_dapai(False)
 
     @staticmethod
-    def get_chi_mianzi_(rule_: dict[str, Any], shoupai: Shoupai, p: str, paishu: int):
+    def get_chi_mianzi_(rule_: dict[str, Any], shoupai: Shoupai, p: str, paishu: int) -> list[str] | None:
+        """
+        チー可能な面子の一覧
 
+        Parameters
+        ----------
+        rule_ : dict
+            ルール
+        shoupai : jongpy.core.Shoupai
+            手牌
+        p : str
+            牌
+        paishu : int
+            残り牌数
+
+        Returns
+        -------
+        list[str] (or None)
+            面子の配列
+        """
+
+        # 喰い替えなしの場合は Shoupai に任せる
         mianzi = shoupai.get_chi_mianzi(p, rule_['allow_fulou_slide'] == 0)
         if not mianzi:
             return mianzi
+        # 現物喰い替えなしの場合は、すでに3副露していて残り2枚が現物となる場合だけ鳴けない
         if rule_['allow_fulou_slide'] == 1 and len(shoupai._fulou) == 3 and shoupai._bingpai[p[0]][int(p[1])] == 2:
             mianzi = []
-        return [] if paishu == 0 else mianzi
+        return [] if paishu == 0 else mianzi    # 河底牌は鳴けない
 
     @staticmethod
-    def get_peng_mianzi_(rule_: dict[str, Any], shoupai: Shoupai, p: str, paishu: int):
+    def get_peng_mianzi_(rule_: dict[str, Any], shoupai: Shoupai, p: str, paishu: int) -> list[str] | None:
+        """
+        ポン可能な面子の一覧
 
-        mianzi = shoupai.get_peng_mianzi(p)
+        Parameters
+        ----------
+        rule_ : dict
+            ルール
+        shoupai : jongpy.core.Shoupai
+            手牌
+        p : str
+            牌
+        paishu : int
+            残り牌数
+
+        Returns
+        -------
+        list[str] (or None)
+            面子の配列
+        """
+
+        mianzi = shoupai.get_peng_mianzi(p)     # Shoupai に任せる
         if not mianzi:
             return mianzi
-        return [] if paishu == 0 else mianzi
+        return [] if paishu == 0 else mianzi    # 河底牌は鳴けない
 
     @staticmethod
-    def get_gang_mianzi_(rule_: dict[str, Any], shoupai: Shoupai, p: str | None, paishu: int, n_gang: int):
+    def get_gang_mianzi_(
+        rule_: dict[str, Any],
+        shoupai: Shoupai,
+        p: str | None,
+        paishu: int,
+        n_gang: int
+    ) -> list[str] | None:
+        """
+        カン可能な面子の一覧
 
-        mianzi = shoupai.get_gang_mianzi(p)
+        Parameters
+        ----------
+        rule_ : dict
+            ルール
+        shoupai : jongpy.core.Shoupai
+            手牌
+        p : str (or None)
+            牌
+            None の場合は暗槓・加槓と対象とする
+        paishu : int
+            残り牌数
+        n_gang : int
+            局のカン数
+
+        Returns
+        -------
+        list[str] (or None)
+            面子の一覧
+        """
+
+        mianzi = shoupai.get_gang_mianzi(p)     # Shoupai に任せる
         if not mianzi:
-            return mianzi
+            return mianzi   # カンできない場合はそう応答する
 
-        if shoupai.lizhi:
-            if rule_['allow_angang_after_lizhi'] == 0:
+        if shoupai.lizhi:   # リーチ後の暗槓可否を確認する
+            if rule_['allow_angang_after_lizhi'] == 0:  # すべての暗槓が不可の場合
                 return []
-            elif rule_['allow_angang_after_lizhi'] == 1:
-                new_shoupai = copy.copy(shoupai).dapai(shoupai._zimo)
+            elif rule_['allow_angang_after_lizhi'] == 1:    # 牌姿の変わる暗槓が不可の場合
+                new_shoupai = shoupai.clone().dapai(shoupai._zimo)
                 n_hule1 = 0
                 n_hule2 = 0
+                # 暗槓前の牌姿から可能な和了形をすべて求める
                 for p in tingpai(new_shoupai):
                     n_hule1 += len(hule_mianzi(new_shoupai, p))
-                new_shoupai = copy.copy(shoupai).gang(mianzi[0])
+                new_shoupai = shoupai.clone().gang(mianzi[0])
                 for p in tingpai(new_shoupai):
                     n_hule2 += len(hule_mianzi(new_shoupai, p))
-                if n_hule1 > n_hule2:
+                if n_hule1 > n_hule2:   # 両者が一致しない場合暗槓不可
                     return []
-            else:
-                new_shoupai = copy.copy(shoupai).dapai(shoupai._zimo)
+            else:   # 待ちの変わる暗槓が不可の場合
+                # 暗槓前の牌姿での和了牌一覧を求める
+                new_shoupai = shoupai.clone().dapai(shoupai._zimo)
                 n_tingpai1 = len(tingpai(new_shoupai))
-                new_shoupai = copy.copy(shoupai).gang(mianzi[0])
-                if xiangting(new_shoupai) > 0:
+                # 暗槓後の牌姿での和了牌一覧を求める
+                new_shoupai = shoupai.clone().gang(mianzi[0])
+                if xiangting(new_shoupai) > 0:  # テンパイが崩れるカンは不可
                     return []
                 n_tingpai2 = len(tingpai(new_shoupai))
-                if n_tingpai1 > n_tingpai2:
+                if n_tingpai1 > n_tingpai2:     # 両者が一致しない場合暗槓不可
                     return []
 
+        # 海底(河底)牌はカンできない
+        # 5つ目となるカンもできない
         return [] if paishu == 0 or n_gang == 4 else mianzi
 
     @staticmethod
-    def allow_lizhi_(rule_: dict[str, Any], shoupai: Shoupai, p: str | None, paishu: int, defen: int):
+    def allow_lizhi_(
+        rule_: dict[str, Any],
+        shoupai: Shoupai,
+        p: str | None,
+        paishu: int, defen: int
+    ) -> list[str] | bool:
+        """
+        リーチ可能かどうか判定する
+
+        Parameters
+        ----------
+        rule_ : dict
+            ルール
+        shoupai : jongpy.core.Shoupai
+            手牌
+        p : str (or None)
+            牌
+        paishu : int
+            残り牌数
+        defen : int
+            持ち点
+
+        Returns
+        -------
+        list[str] or bool
+            ``p``が指定されていない場合、リーチ可能な牌の一覧を返す
+            リーチできる牌がない場合、または``p``が指定されている場合、リーチ可能かどうかを返す
+        """
 
         if shoupai._zimo is None:
-            return False
+            return False    # 打牌できないときはリーチも不可
         if shoupai.lizhi:
-            return False
+            return False    # リーチ後はリーチ不可
         if not Shoupai.menqian:
-            return False
+            return False    # 副露後はリーチ不可
 
+        # ツモ番なしリーチ不可の場合、残り牌数4枚以下ではリーチ不可
         if not rule_['lizhi_no_zimo'] and paishu < 4:
             return False
+
+        # トビ終了ありの場合、持ち点1000点未満ではリーチ不可
         if rule_['minus_interruption'] and defen < 1000:
             return False
 
+        # テンパイしていない場合はリーチ不可
         if xiangting(shoupai) > 0:
             return False
 
-        if p:
-            new_shoupai = copy.copy(shoupai).dapai(p)
+        if p:   # 牌 p の指定あり
+            new_shoupai = shoupai.clone().dapai(p)
+            # p を打牌した牌姿がテンパイしていればリーチ可
             return xiangting(new_shoupai) == 0 and len(tingpai(new_shoupai)) > 0
-        else:
+        else:   # 牌 p の指定なし
             dapai = []
+            # 打牌可能な牌について以下を行う
             for p in Game.get_dapai_(rule_, shoupai):
-                new_shoupai = copy.copy(shoupai).dapai(p)
+                new_shoupai = shoupai.clone().dapai(p)
                 if xiangting(new_shoupai) == 0 and len(tingpai(new_shoupai)) > 0:
-                    dapai.append(p)
+                    dapai.append(p)     # 打牌後の牌姿がテンパイしていればリーチ可
+            # リーチ可能な牌がない場合は False を返す
             return dapai if len(dapai) else False
 
     @staticmethod
@@ -958,25 +1513,55 @@ class Game:
         zhuangfeng: int,
         menfeng: int,
         hupai: bool,
-        neng_rong: bool
+        neng_rong: bool = False
     ) -> bool:
+        """
+        和了可能か判定する
 
+        Parameters
+        ----------
+        rule_ : dict
+            ルール
+        shoupai : jongpy.core.Shoupai
+            手牌
+        p : str (or None)
+            ロン牌
+            `None`の場合はツモ和了として扱う
+        zhuangfeng : int
+            場風牌の指定
+        menfeng : int
+            自風牌の指定
+        hupai : bool
+            状況役があるかどうか
+        neng_rong : bool
+            フリテンの場合は`False`
+
+        Returns
+        -------
+        bool
+            和了可能かどうか
+        """
+
+        # フリテンはロン和了できない
         if p and not neng_rong:
             return False
 
-        new_shoupai = copy.copy(shoupai)
+        # ロン牌を含めて和了形(シャン点数 = -1)となっていない場合は和了できない
+        new_shoupai = shoupai.clone()
         if p:
             new_shoupai.zimo(p)
         if xiangting(new_shoupai) != -1:
             return False
 
+        # 和了形となっていて状況役があれば和了できる
         if hupai:
             return True
 
+        # 和了点計算ルーチンを呼び出して和了可能か判定する
         param = {
-            'rule': rule_,
-            'zhuangfeng': zhuangfeng,
-            'menfeng': menfeng,
+            'rule': rule_,  # ルール
+            'zhuangfeng': zhuangfeng,   # 場風
+            'menfeng': menfeng,     # 自風
             'hupai': {},
             'baopai': [],
             'jicun': {'changbang': 0, 'lizhibang': 0}
@@ -986,13 +1571,34 @@ class Game:
         return h['hupai'] is not None
 
     @staticmethod
-    def allow_pingju_(rule_: dict[str, Any], shoupai: Shoupai, diyizimo: str) -> bool:
+    def allow_pingju_(rule_: dict[str, Any], shoupai: Shoupai, diyizimo: bool) -> bool:
+        """
+        九種九牌流局可能か判定する
 
+        Parameters
+        ----------
+        rule_ : dict
+            ルール
+        shoupai : jongpy.core.Shoupai
+            手牌
+        diyizimo : bool
+            第一ツモ巡かどうか
+
+        Returns
+        -------
+        bool
+            九種九牌流局可能かどうか
+        """
+
+        # 第一ツモでなければ成立しない
         if not (diyizimo and shoupai._zimo):
             return False
+
+        # 途中流局なしの場合は成立しない
         if not rule_['interrupted_pingju']:
             return False
 
+        # 手牌中のヤオ九牌の種類数を数える
         n_yaojiu = 0
         for s in ['m', 'p', 's', 'z']:
             bingpai = shoupai._bingpai[s]
@@ -1000,16 +1606,40 @@ class Game:
             for n in nn:
                 if bingpai[n] > 0:
                     n_yaojiu += 1
+        # 9種類以上あれば成立する
         return n_yaojiu >= 9
 
     @staticmethod
     def allow_no_daopai(rule_: dict[str, Any], shoupai: Shoupai, paishu: int) -> bool:
+        """
+        「ノーテン宣言」可能か判定する
 
+        Parameters
+        ----------
+        rule_ : dict
+            ルール
+        shoupai : jongpy.core.Shoupai
+            手牌
+        paishu : int
+            残り牌数
+
+        Returns
+        -------
+        bool
+            ノーテン宣言可能かどうか
+        """
+
+        # 最終打牌以外はノーテン宣言できない
         if paishu > 0 or shoupai._zimo:
             return False
+
+        # ノーテン宣言なしの場合はノーテン宣言できない
         if not rule_['declare_no_tingpai']:
             return False
+
+        # リーチ後はノーテン宣言できない
         if shoupai.lizhi:
             return False
 
+        # テンパイしていない場合、テンパイしていても和了牌が存在しない場合はノーテン宣言できない
         return xiangting(shoupai) == 0 and len(tingpai(shoupai)) > 0
