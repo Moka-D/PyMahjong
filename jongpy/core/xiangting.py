@@ -204,10 +204,10 @@ def xiangting_goushi(shoupai: Shoupai) -> int:
     if len(shoupai._fulou):     # 副露ありは国士無双にならない
         return XIANGTING_INF
 
-    n_yaojiu = 0    # ヤオ九牌の種類数
-    n_duizi = 0     # ヤオ九牌の対子数
+    n_yaojiu = 0    # 幺九牌の種類数
+    n_duizi = 0     # 幺九牌の対子数
 
-    # すべてのヤオ九牌について種類数と対子数をカウントする
+    # すべての幺九牌について種類数と対子数をカウントする
     for s in ['m', 'p', 's', 'z']:
         bingpai = shoupai._bingpai[s]
         nn = [1, 2, 3, 4, 5, 6, 7] if s == 'z' else [1, 9]

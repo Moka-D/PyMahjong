@@ -6,6 +6,9 @@ import re
 import datetime
 import random
 import json
+import asyncio
+import time
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Callable, Any, TYPE_CHECKING
 
 from jongpy.core.shoupai import Shoupai
@@ -17,6 +20,11 @@ from jongpy.core.hule import hule_mianzi, hule
 
 if TYPE_CHECKING:
     from jongpy.core.player import Player
+
+
+def wrap_with_delay(sec: float, callback: Callable, *args):
+    time.sleep(sec)
+    callback(*args)
 
 
 class Game:
@@ -40,7 +48,7 @@ class Game:
             'player': ['自家', '下家', '対面', '上家'],
             'qijia': 0,
             'zhuangfeng': 0,
-            'jishu': 0,
+            'jushu': 0,
             'changbang': 0,
             'lizhibang': 0,
             'defen': [self._rule['origin_points']] * 4,
@@ -59,8 +67,7 @@ class Game:
         self._stop = None
         self._speed = 3
         self._wait = 0
-        self._timeout_id = None
-
+        self._loop = None
         self._handler = None
 
     @property
@@ -102,7 +109,19 @@ class Game:
     def add_paipu(self, paipu: dict):
         self._paipu['log'].append(paipu)
 
-    def delay(self, callback: Callable, timeout: int | None = None):
+    def set_timeout(self, timeout: int, callback: Callable, *args):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_in_executor(None, wrap_with_delay, timeout / 1000, callback, *args)
+        return loop
+
+    def clear_timeout(self):
+        if self._loop is not None:
+            self._loop.stop()
+            self._loop.close()
+            self._loop = None
+
+    def delay(self, callback: Callable, timeout: int | None = None, loop=None):
 
         if self._sync:
             return callback()
@@ -110,16 +129,20 @@ class Game:
         timeout = (0 if self._speed == 0
                    else max(500, self._speed * 200) if timeout is None
                    else timeout)
-        # setTimeout(callback, timeout)
+        self.set_timeout(timeout, callback)
 
-    def stop(self, callback: Callable):
-        self._stop = callback
+    def stop(self, callback: Callable | None = None):
+
+        def f():
+            return
+
+        self._stop = f if callback is None else callback
 
     def start(self):
-        if self._timeout_id:
+        if self._loop is not None:
             return
         self._stop = None
-        # self._timeout_id = setTimeout(lambda: self.next(), 0)
+        self._loop = self.set_timeout(0, lambda: self.next())
 
     def notify_players(self, type: str, msg: list[dict]):
         """
@@ -140,8 +163,7 @@ class Game:
                 # 同期モードの場合は直接 action メソッドを呼び出す
                 self._players[id].action(msg[i])
             else:
-                # setTimeout(lambda: self._players[id].action(msg[i]), 0)
-                pass
+                self.set_timeout(0, self._players[id].action, msg[i])
 
     def call_players(self, type: str, msg: list[dict], timeout: int | None = None):
         """
@@ -166,7 +188,7 @@ class Game:
         self._status = type
 
         # 応答を保存する配列を初期化
-        self._reply = [{}] * 4
+        self._reply = [None] * 4
 
         # 東家から順に対局者にメッセージを送信する
         for i in range(4):
@@ -175,11 +197,10 @@ class Game:
                 # 同期モードの場合は直接 action メソッドを呼び出す
                 self._players[id].action(msg[i], lambda reply: self.reply(id, reply))
             else:
-                pass
+                self.set_timeout(0, self._players[id].action, msg[i], lambda reply: self.reply(id, reply))
 
         if not self._sync:
-            # self._timeout_id = setTimeout(lambda: self.next(), timeout)
-            pass
+            self._loop = self.set_timeout(timeout, self.next)
 
     def reply(self, id: int, reply: dict | None = None):
         """
@@ -200,25 +221,24 @@ class Game:
         # 再度 next() を呼び出す
         if self._sync:
             return
-        if len([x for x in self._reply if x]) < 4:
+        if len([x for x in self._reply if x is not None]) < 4:
             return
-        if not self._timeout_id:
-            # self._timeout_id = setTimeout(lambda: self.next(), 0)
-            pass
+        if not self._loop:
+            self._loop = self.set_timeout(0, self.next)
 
     def next(self):
         """対局者からの応答を読み出し、次のステップに遷移"""
 
         # 呼び出しタイマーのクリア
-        # self._timeout_id = clearTimeout(self._timeout_id)
+        self.clear_timeout()
 
         # 4人分の応答がそろっていない場合は以降の処理は行わない
-        if len([x for x in self._reply if x]) > 4:
+        if len([x for x in self._reply if x is not None]) < 4:
             return
 
         # 外部から停止要求があった場合は停止する
         if self._stop is not None:
-            self._stop()
+            return self._stop()
 
         # メッセージに対応した状態遷移メソッドを呼び出す
         if self._status == 'kaiju':
@@ -340,7 +360,7 @@ class Game:
 
             model['shoupai'][i] = Shoupai(qipai)    # 配牌で手牌を初期化
             model['he'][i] = He()   # 捨て牌を初期化
-            model['player_id'][i] = (model['qijia'] + model['jushu'] + 1) % 4
+            model['player_id'][i] = (model['qijia'] + model['jushu'] + i) % 4
 
         model['lunban'] = -1    # 手版を初期化
 
@@ -365,7 +385,6 @@ class Game:
 
         # 2. 牌譜を追加する
         self._paipu['defen'] = model['defen'][:]
-        self._paipu['log'].append([])
         paipu = {
             'qipai': {
                 'zhuangfeng': model['zhuangfeng'],  # 場風
@@ -385,7 +404,7 @@ class Game:
             msg[i] = json.loads(json.dumps(paipu))
             for j in range(4):
                 if j != i:
-                    msg[i]['qipai']['shoupai'][i] = ''  # 他の対局者はマスクする
+                    msg[i]['qipai']['shoupai'][j] = ''  # 他の対局者はマスクする
 
         self.call_players('qipai', msg, 0)
 
@@ -454,7 +473,8 @@ class Game:
             self._yifa[model['lunban']] = self._rule['yifa']    # 一発アリルールならフラグをONに
 
         if (xiangting(model['shoupai'][model['lunban']]) == 0
-                and any(map(lambda p: model['he'][model['lunban']].find(p), tingpai(model['shoupai'][model['lunban']])))):
+                and any(map(lambda p: model['he'][model['lunban']].find(p),
+                            tingpai(model['shoupai'][model['lunban']])))):
             self._neng_rong[model['lunban']] = False    # フリテン判断する
 
         self._dapai = dapai     # 最後の打牌を保存
@@ -708,7 +728,7 @@ class Game:
         if self._view is not None:
             self._view.update(paipu)
 
-    def pingju(self, name: str | None, shoupai: list[str] = ['', '', '', '']):
+    def pingju(self, name: str | None = None, shoupai: list[str] | None = None):
         """
         流局の処理を行う
 
@@ -720,6 +740,9 @@ class Game:
             牌姿の配列
         """
 
+        if shoupai is None:
+            shoupai = [''] * 4
+
         # 1. 卓情報を更新
         model = self._model
         fenpei = [0] * 4    # 流局による点棒の移動を初期化
@@ -729,22 +752,21 @@ class Game:
             # 手牌の公開・非公開を判定し、公開(=テンパイ)の人数をカウントする
             n_tingpai = 0
             for i in range(4):
-                if (self._rule['declare_no_tingpai'] and not shoupai[i]
-                        and not model['shoupai'][i].lizhi):
+                if self._rule['declare_no_tingpai'] and not shoupai[i] and not model['shoupai'][i].lizhi:
                     # ノーテン宣言ありの場合、リーチ者以外は対局者の
                     # 非公開の意思に従う
                     continue
 
-                if (not self._rule['penalty_no_tingpai']
-                    and (self._rule['continuous_zhuang'] != 2 or i != 0)
+                if (not self._rule['penalty_no_tingpai'] and (self._rule['continuous_zhuang'] != 2 or i != 0)
                         and not model['shoupai'][i].lizhi):
                     # ノーテン罰なしのルールの場合、リーチ以外で手牌公開の
                     # 意味があるのはテンパイ連荘のルールのときの親のみ
                     shoupai[i] = ''
+
                 elif xiangting(model['shoupai'][i]) == 0 and len(tingpai(model['shoupai'][i])) > 0:
                     # それ以外でテンパイしている場合は手牌を公開する
                     n_tingpai += 1
-                    shoupai[i] = str(model['shoupai'])
+                    shoupai[i] = str(model['shoupai'][i])
 
                     # テンパイ連荘のルールの場合は親がテンパイしていれば連荘が確定する
                     if self._rule['continuous_zhuang'] == 2 and i == 0:
@@ -757,7 +779,7 @@ class Game:
             if self._rule['pingju_manguan']:
                 for i in range(4):
                     # 流し満貫の判定を行う
-                    # 鳴かれた牌がある場合、ヤオ九牌を打牌している場合は、
+                    # 鳴かれた牌がある場合、幺九牌を打牌している場合は、
                     # 流し満貫は成立しない
                     all_yaojiu = True
                     for p in model['he'][i]._pai:
@@ -766,7 +788,7 @@ class Game:
                             break
                         if re.search(r'^z', p):
                             continue
-                        if re.search(r'^[mps][19]'):
+                        if re.search(r'^[mps][19]', p):
                             continue
                         all_yaojiu = False
                         break
@@ -782,7 +804,7 @@ class Game:
 
             # 流し満貫がない場合、ノーテン罰符の清算を行う
             if not name:
-                name = '荒牌流局'   # 流局理由を設定
+                name = '荒牌平局'   # 流局理由を設定
                 if self._rule['penalty_no_tingpai'] and 0 < n_tingpai < 4:
                     # ノーテン罰符ありのルールなら清算する
                     for i in range(4):
@@ -800,7 +822,7 @@ class Game:
         if self._rule['n_zhuang'] == 0:
             self._lianzhuang = True
 
-        self._fengpai = fenpei  # その局の点棒移動を保存
+        self._fenpei = fenpei  # その局の点棒移動を保存
 
         # 2. 牌譜を追加する
         paipu = {
@@ -830,7 +852,7 @@ class Game:
         # 連荘でなければ次の局に進む
         if not self._lianzhuang:
             model['jushu'] += 1
-            model['zhuangfeng'] += (model['jushu'] / 4) | 0
+            model['zhuangfeng'] += int(model['jushu'] / 4) | 0
             model['jushu'] = model['jushu'] % 4
 
         # 持ち点30,000点以上で持ち点最大の対局者を guanjun に設定する
@@ -859,13 +881,12 @@ class Game:
             elif guanjun >= 0:
                 jieju = True    # 30,000点越えがいるなら終局
             else:   # さらに延長戦を続ける
-                self._max_jushu += (4 if self._rule['extra_game_method']    # 4局固定延長の場合
-                                                                            # 最終局を4局先に延ばす
-                                    else 1 if self._rule['extra_game_method']   # 連荘優先サドンデスの場合
-                                                                                # 1局先に延ばす
+                self._max_jushu += (4 if self._rule['extra_game_method'] == 3   # 4局固定延長の場合、最終局を4局先に延ばす
+                                    else 1 if self._rule['extra_game_method'] == 2  # 連荘優先サドンデスの場合、1局先に延ばす
                                     else 0)     # その他の場合、延長しない
         elif self._max_jushu == sum_jushu:  # 最終局の場合
-            if self._rule['stop_last_game'] and guanjun == model['player_id'][0] and self._lianzhuang and not self._no_game:
+            if (self._rule['stop_last_game'] and guanjun == model['player_id'][0]
+                    and self._lianzhuang and not self._no_game):
                 jieju = True    # オーラス止めの条件を満たせば終局
 
         if jieju:
@@ -900,20 +921,22 @@ class Game:
 
         # 順位点を加えたポイントを計算し、牌譜に設定する
         round_ = not any(map(lambda p: re.search(r'\.\d$', p), self._rule['rank_bounus']))
-        point = [0] * 4
+        point = [0.0] * 4
         for i in range(1, 4):
             id = paiming[i]
             point[id] = (defen[id] - 30000) / 1000 + float(self._rule['rank_bounus'][i])
             if round_:
-                point[id] = round(point[id])
+                # point[id] = round(point[id])
+                point[id] = float(Decimal(str(point[id])).quantize(Decimal('0'), rounding=ROUND_HALF_UP))
             point[paiming[0]] -= point[id]
-        self._paipu['point'] = list(map(lambda p: round(p, 0) if round_ else round(p, 1)))
+        # self._paipu['point'] = list(map(lambda p: round(p, 0) if round_ else round(p, 1), point))
+        self._paipu['point'] = list(map(lambda p: ("{:.0f}" if round_ else "{:.1f}").format(p), point))
 
         # 対局者に通知メッセージを送信する
         paipu = {'jieju': self._paipu}
         msg = [{}] * 4
         for i in range(4):
-            msg[i] = json.load(json.dump(paipu))
+            msg[i] = json.loads(json.dumps(paipu))
         self.call_players('jieju', msg, self._wait)
 
         # (必要であれば)描画を指示する
@@ -1133,7 +1156,7 @@ class Game:
         model['lizhibang'] = 0
 
         if len(self._hule):     # 続く和了がある場合
-            return self.delay(self.hule())  # 和了に遷移する
+            return self.delay(lambda: self.hule())  # 和了に遷移する
         else:   # 和了がない場合
             if self._lianzhuang:    # 連荘の場合
                 # 局開始時の状態の積み棒に1加算する
@@ -1278,7 +1301,8 @@ class Game:
             # 和了牌を決定する
             # 槍槓の場合は最後にカンした面子 _gang から、
             # その他の場合は最後に打牌した牌 _dapai から決定する
-            p = self._gang[0] + self._gang[-1] if self._status == 'gang' else self._dapai
+            p = (self._gang[0] + self._gang[-1] if self._status == 'gang'
+                 else self._dapai) + '_+=-'[(4 + model['lunban'] - i) % 4]
             # 状況役の有無を判定する
             hupai = (model['shoupai'][i].lizhi      # 立直
                      or self._status == 'gangzimo'  # 嶺上開花
@@ -1396,7 +1420,7 @@ class Game:
         shoupai: Shoupai,
         p: str | None,
         paishu: int,
-        n_gang: int
+        n_gang: int = 0
     ) -> list[str] | None:
         """
         カン可能な面子の一覧
@@ -1460,8 +1484,9 @@ class Game:
     def allow_lizhi_(
         rule_: dict[str, Any],
         shoupai: Shoupai,
-        p: str | None,
-        paishu: int, defen: int
+        p: str | None = None,
+        paishu: int = 4,
+        defen: int = 1000
     ) -> list[str] | bool:
         """
         リーチ可能かどうか判定する
@@ -1490,7 +1515,7 @@ class Game:
             return False    # 打牌できないときはリーチも不可
         if shoupai.lizhi:
             return False    # リーチ後はリーチ不可
-        if not Shoupai.menqian:
+        if not shoupai.menqian:
             return False    # 副露後はリーチ不可
 
         # ツモ番なしリーチ不可の場合、残り牌数4枚以下ではリーチ不可
@@ -1612,7 +1637,7 @@ class Game:
         if not rule_['interrupted_pingju']:
             return False
 
-        # 手牌中のヤオ九牌の種類数を数える
+        # 手牌中の幺九牌の種類数を数える
         n_yaojiu = 0
         for s in ['m', 'p', 's', 'z']:
             bingpai = shoupai._bingpai[s]

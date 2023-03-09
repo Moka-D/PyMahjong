@@ -78,7 +78,9 @@ def mianzi_all(shoupai: Shoupai) -> list[list[str]]:
 def add_hulepai(mianzi: list[str], p: str) -> list[list[str]]:
     """和了牌のマークを付ける"""
 
-    s, n, d = p[:]
+    s = p[0]
+    n = p[1]
+    d = p[2] if len(p) == 3 else ''
     regexp = re.compile(f'^({s}.*{n})')     # 和了牌を探す正規表現
     replacer = f'\\1{d}!'   # マークを付ける置換文字列
 
@@ -131,6 +133,7 @@ def hule_mianzi_qidui(shoupai: Shoupai, hulepai: str) -> list[list[str]]:
         return []
 
     mianzi = []
+    d = hulepai[2] if len(hulepai) == 3 else ''
 
     # 全ての牌について対子があるかチェックする
     for s in ['m', 'p', 's', 'z']:
@@ -139,7 +142,7 @@ def hule_mianzi_qidui(shoupai: Shoupai, hulepai: str) -> list[list[str]]:
             if bingpai[n] == 0:     # 0枚の場合は継続
                 continue
             if bingpai[n] == 2:     # 2枚(対子)の場合
-                m = s + str(n) * 2 + hulepai[2] + '!' if s + str(n) == hulepai[0:2] else s + str(n) * 2
+                m = s + str(n) * 2 + d + '!' if s + str(n) == hulepai[0:2] else s + str(n) * 2
                 mianzi.append(m)
             else:   # それ以外は七対子にならない
                 return []
@@ -155,18 +158,19 @@ def hule_mianzi_goushi(shoupai: Shoupai, hulepai: str) -> list[list[str]]:
 
     mianzi = []
     n_duizi = 0
+    d = hulepai[2] if len(hulepai) == 3 else ''
 
-    # すべてのヤオ九牌の存在と枚数をチェックする
+    # すべての幺九牌の存在と枚数をチェックする
     for s in ['m', 'p', 's', 'z']:
         bingpai = shoupai._bingpai[s]
         nn = [1, 2, 3, 4, 5, 6, 7] if s == 'z' else [1, 9]
         for n in nn:
             if bingpai[n] == 2:     # 2舞の場合
-                m = s + str(n) * 2 + hulepai[2] + '!' if s + str(n) == hulepai[0:2] else s + str(n) * 2
+                m = s + str(n) * 2 + d + '!' if s + str(n) == hulepai[0:2] else s + str(n) * 2
                 mianzi.insert(0, m)     # 雀頭は先頭にする
                 n_duizi += 1
             elif bingpai[n] == 1:   # 1枚の場合
-                m = s + str(n) + hulepai[2] + '!' if s + str(n) == hulepai[0:2] else s + str(n)
+                m = s + str(n) + d + '!' if s + str(n) == hulepai[0:2] else s + str(n)
                 mianzi.append(m)
             else:   # それ以外は国士無双にならない
                 return []
@@ -245,7 +249,7 @@ def get_hudi(mianzi: list[str], zhuangfeng: int, menfeng: int) -> dict[str, int 
     menfengpai = re.compile(f'^z{menfeng+1}.*$')    # 自風
     sanyuanpai = re.compile(r'^z[567].*$')  # 三元牌
 
-    yaojiu = re.compile(r'^.*[z19].*$')     # ヤオ九牌
+    yaojiu = re.compile(r'^.*[z19].*$')     # 幺九牌
     zipai = re.compile(r'^z.*$')    # 字牌
 
     kezi = re.compile(r'^[mpsz](\d)\1\1.*$')    # 刻子
@@ -276,7 +280,7 @@ def get_hudi(mianzi: list[str], zhuangfeng: int, menfeng: int) -> dict[str, int 
         'n_kezi': 0,    # 刻子の数
         'n_ankezi': 0,  # 暗刻の数
         'n_gangzi': 0,  # 槓子の数
-        'n_yaojiu': 0,  # ヤオ九牌を含むブロックの数
+        'n_yaojiu': 0,  # 幺九牌を含むブロックの数
         'n_zipai': 0,   # 字牌を含むブロックの数
         'danqi': False,     # 単騎待ちのとき True
         'pinghu': False,    # 平和のとき True
@@ -302,7 +306,7 @@ def get_hudi(mianzi: list[str], zhuangfeng: int, menfeng: int) -> dict[str, int 
             continue
 
         if re.search(yaojiu, m):
-            hudi['n_yaojiu'] += 1   # ヤオ九牌を含むブロック数を加算
+            hudi['n_yaojiu'] += 1   # 幺九牌を含むブロック数を加算
         if re.search(zipai, m):
             hudi['n_zipai'] += 1    # 字牌を含むブロック数を加算
 
@@ -325,7 +329,7 @@ def get_hudi(mianzi: list[str], zhuangfeng: int, menfeng: int) -> dict[str, int 
             hudi['n_kezi'] += 1     # 刻子の数を加算
             fu = 2  # 刻子の符を 2 で初期化
             if re.search(yaojiu, m):
-                fu *= 2     # ヤオ九牌の場合、符を2倍にする
+                fu *= 2     # 幺九牌の場合、符を2倍にする
             if re.search(ankezi, m):
                 fu *= 2     # 暗刻の場合、符を2倍にする
                 hudi['n_ankezi'] += 1
@@ -430,7 +434,7 @@ class HupaiSolver:
             return []
         # 喰いタンありの場合、副露していても成立
         if self._rule['fulou_duanyaojiu'] or self._hudi['menqian']:
-            return [{'name': '断ヤオ九', 'fanshu': 1}]
+            return [{'name': '断幺九', 'fanshu': 1}]
         return []
 
     def yibeikou(self):
@@ -462,7 +466,7 @@ class HupaiSolver:
     def hunquandaiyaojiu(self):
         """チャンタ"""
         if self._hudi['n_yaojiu'] == 5 and self._hudi['n_shunzi'] > 0 and self._hudi['n_zipai'] > 0:
-            return [{'name': '混全帯ヤオ九', 'fanshu': (2 if self._hudi['menqian'] else 1)}]
+            return [{'name': '混全帯幺九', 'fanshu': (2 if self._hudi['menqian'] else 1)}]
         return []
 
     def qiduizi(self):
@@ -521,7 +525,7 @@ class HupaiSolver:
     def chunquandaiyaojiu(self):
         """純チャン"""
         if self._hudi['n_yaojiu'] == 5 and self._hudi['n_shunzi'] > 0 and self._hudi['n_zipai'] == 0:
-            return [{'name': '純全帯ヤオ九', 'fanshu': (3 if self._hudi['menqian'] else 2)}]
+            return [{'name': '純全帯幺九', 'fanshu': (3 if self._hudi['menqian'] else 2)}]
         return []
 
     def erbeikou(self):

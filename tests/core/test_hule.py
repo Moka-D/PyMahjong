@@ -269,11 +269,11 @@ class TestHuleHupai:
 
     def test_hupai_danyaojiu(self):
         h = hule(Shoupai.from_str('m22555p234s78,p777-'), 's6=', param())
-        assert h['hupai'] == [{'name': '断ヤオ九', 'fanshu': 1}]
+        assert h['hupai'] == [{'name': '断幺九', 'fanshu': 1}]
 
     def test_hupai_danyaojiu_qiduizi(self):
         h = hule(Shoupai.from_str('m2255p4488s33667'), 's7=', param())
-        assert h['hupai'] == [{'name': '断ヤオ九', 'fanshu': 1},
+        assert h['hupai'] == [{'name': '断幺九', 'fanshu': 1},
                               {'name': '七対子', 'fanshu': 2}]
 
     def test_hupai_yibeikou(self):
@@ -302,11 +302,11 @@ class TestHuleHupai:
 
     def test_hupai_hunquandaiyaojiu(self):
         h = hule(Shoupai.from_str('m123999p789z33s12'), 's3=', param())
-        assert h['hupai'] == [{'name': '混全帯ヤオ九', 'fanshu': 2}]
+        assert h['hupai'] == [{'name': '混全帯幺九', 'fanshu': 2}]
 
     def test_hupai_fulou_hunquandaiyaojiu(self):
         h = hule(Shoupai.from_str('m123p789z33s12,m999+'), 's3=', param())
-        assert h['hupai'] == [{'name': '混全帯ヤオ九', 'fanshu': 1}]
+        assert h['hupai'] == [{'name': '混全帯幺九', 'fanshu': 1}]
 
     def test_hupai_qiduizi(self):
         h = hule(Shoupai.from_str('m115599p2233s8z22'), 's8=', param())
@@ -359,11 +359,11 @@ class TestHuleHupai:
 
     def test_hupai_chunquandaiyaojiu(self):
         h = hule(Shoupai.from_str('m11s123p789s789m99'), 'm9=', param())
-        assert h['hupai'] == [{'name': '純全帯ヤオ九', 'fanshu': 3}]
+        assert h['hupai'] == [{'name': '純全帯幺九', 'fanshu': 3}]
 
     def test_hupai_fulou_chunquandaiyaojiu(self):
         h = hule(Shoupai.from_str('m11s123p789s78,m999='), 's9=', param())
-        assert h['hupai'] == [{'name': '純全帯ヤオ九', 'fanshu': 2}]
+        assert h['hupai'] == [{'name': '純全帯幺九', 'fanshu': 2}]
 
     def test_hupai_erbeiko(self):
         h = hule(Shoupai.from_str('m223344p667788s9'), 's9=', param())
@@ -569,20 +569,20 @@ class TestHuleDefen:
     def test_25fu_4fan_child_zimo(self):
         h = hule(Shoupai.from_str('m2277p3344s556688'), None, param({'lizhibang': 1, 'changbang': 1}))
         assert h == {'hupai': [{'name': '門前清自摸和', 'fanshu': 1},
-                               {'name': '断ヤオ九', 'fanshu': 1},
+                               {'name': '断幺九', 'fanshu': 1},
                                {'name': '七対子', 'fanshu': 2}],
                      'fu': 25, 'fanshu': 4, 'damanguan': None, 'defen': 6400,
                      'fenpei': [-3300, 7700, -1700, -1700]}
 
     def test_30fu_1fan_parent_rong(self):
         h = hule(Shoupai.from_str('m77234p456s67,m34-5'), 's8=', param({'menfeng': 0}))
-        assert h == {'hupai': [{'name': '断ヤオ九', 'fanshu': 1}],
+        assert h == {'hupai': [{'name': '断幺九', 'fanshu': 1}],
                      'fu': 30, 'fanshu': 1, 'damanguan': None, 'defen': 1500,
                      'fenpei': [1500, 0, -1500, 0]}
 
     def test_30fu_2fan_child_rong(self):
         h = hule(Shoupai.from_str('m77234p345s34,m34-5'), 's5-', param())
-        assert h == {'hupai': [{'name': '断ヤオ九', 'fanshu': 1},
+        assert h == {'hupai': [{'name': '断幺九', 'fanshu': 1},
                                {'name': '三色同順', 'fanshu': 1}],
                      'fu': 30, 'fanshu': 2, 'damanguan': None, 'defen': 2000,
                      'fenpei': [-2000, 2000, 0, 0]}
@@ -599,7 +599,7 @@ class TestHuleDefen:
         h = hule(Shoupai.from_str('m11z111p123789s789'), None, param())
         assert h == {'hupai': [{'name': '門前清自摸和', 'fanshu': 1},
                                {'name': '場風 東', 'fanshu': 1},
-                               {'name': '混全帯ヤオ九', 'fanshu': 2}],
+                               {'name': '混全帯幺九', 'fanshu': 2}],
                      'fu': 30, 'fanshu': 4, 'damanguan': None, 'defen': 7900,
                      'fenpei': [-3900, 7900, -2000, -2000]}
 
@@ -611,7 +611,7 @@ class TestHuleDefen:
 
     def test_40fu_2fan_child_rong(self):
         h = hule(Shoupai.from_str('m22334455p456s68'), 's7-', param())
-        assert h == {'hupai': [{'name': '断ヤオ九', 'fanshu': 1},
+        assert h == {'hupai': [{'name': '断幺九', 'fanshu': 1},
                                {'name': '一盃口', 'fanshu': 1}],
                      'fu': 40, 'fanshu': 2, 'damanguan': None, 'defen': 2600,
                      'fenpei': [-2600, 2600, 0, 0]}
@@ -725,7 +725,7 @@ class TestHuleDefen:
         h = hule(Shoupai.from_str('m11p999s123,z222+2,z1111'), None, param({'zhuangfeng': 1, 'menfeng': 0}))
         assert h == {'hupai': [{'name': '場風 南', 'fanshu': 1},
                                {'name': '自風 東', 'fanshu': 1},
-                               {'name': '混全帯ヤオ九', 'fanshu': 1}],
+                               {'name': '混全帯幺九', 'fanshu': 1}],
                      'fu': 80, 'fanshu': 3, 'damanguan': None, 'defen': 12000,
                      'fenpei': [12000, -4000, -4000, -4000]}
 
@@ -793,7 +793,7 @@ class TestHuleDefen:
     def test_5fan_parent_rong(self):
         h = hule(Shoupai.from_str('m22456p456s44556'), 's6=', param({'menfeng': 0}))
         assert h == {'hupai': [{'name': '平和', 'fanshu': 1},
-                               {'name': '断ヤオ九', 'fanshu': 1},
+                               {'name': '断幺九', 'fanshu': 1},
                                {'name': '一盃口', 'fanshu': 1},
                                {'name': '三色同順', 'fanshu': 2}],
                      'fu': 30, 'fanshu': 5, 'damanguan': None, 'defen': 12000,
@@ -803,7 +803,7 @@ class TestHuleDefen:
         h = hule(Shoupai.from_str('m22456p456s445566'), None, param())
         assert h == {'hupai': [{'name': '門前清自摸和', 'fanshu': 1},
                                {'name': '平和', 'fanshu': 1},
-                               {'name': '断ヤオ九', 'fanshu': 1},
+                               {'name': '断幺九', 'fanshu': 1},
                                {'name': '一盃口', 'fanshu': 1},
                                {'name': '三色同順', 'fanshu': 2}],
                      'fu': 20, 'fanshu': 6, 'damanguan': None, 'defen': 12000,
@@ -830,7 +830,7 @@ class TestHuleDefen:
 
     def test_9fan_parent_rong(self):
         h = hule(Shoupai.from_str('s2223334455567'), 's8=', param({'menfeng': 0}))
-        assert h == {'hupai': [{'name': '断ヤオ九', 'fanshu': 1},
+        assert h == {'hupai': [{'name': '断幺九', 'fanshu': 1},
                                {'name': '三暗刻', 'fanshu': 2},
                                {'name': '清一色', 'fanshu': 6}],
                      'fu': 50, 'fanshu': 9, 'damanguan': None, 'defen': 24000,
@@ -839,7 +839,7 @@ class TestHuleDefen:
     def test_10fan_child_zimo(self):
         h = hule(Shoupai.from_str('s22233344555678'), None, param())
         assert h == {'hupai': [{'name': '門前清自摸和', 'fanshu': 1},
-                               {'name': '断ヤオ九', 'fanshu': 1},
+                               {'name': '断幺九', 'fanshu': 1},
                                {'name': '三暗刻', 'fanshu': 2},
                                {'name': '清一色', 'fanshu': 6}],
                      'fu': 40, 'fanshu': 10, 'damanguan': None, 'defen': 16000,
@@ -848,7 +848,7 @@ class TestHuleDefen:
     def test_11fan_parent_rong(self):
         h = hule(Shoupai.from_str('p2233445566778'), 'p8=', param({'menfeng': 0}))
         assert h == {'hupai': [{'name': '平和', 'fanshu': 1},
-                               {'name': '断ヤオ九', 'fanshu': 1},
+                               {'name': '断幺九', 'fanshu': 1},
                                {'name': '二盃口', 'fanshu': 3},
                                {'name': '清一色', 'fanshu': 6}],
                      'fu': 30, 'fanshu': 11, 'damanguan': None, 'defen': 36000,
@@ -858,7 +858,7 @@ class TestHuleDefen:
         h = hule(Shoupai.from_str('p22334455667788'), None, param())
         assert h == {'hupai': [{'name': '門前清自摸和', 'fanshu': 1},
                                {'name': '平和', 'fanshu': 1},
-                               {'name': '断ヤオ九', 'fanshu': 1},
+                               {'name': '断幺九', 'fanshu': 1},
                                {'name': '二盃口', 'fanshu': 3},
                                {'name': '清一色', 'fanshu': 6}],
                      'fu': 20, 'fanshu': 12, 'damanguan': None, 'defen': 24000,
@@ -867,7 +867,7 @@ class TestHuleDefen:
     def test_13fan_parent_rong(self):
         h = hule(Shoupai.from_str('m1177778888999'), 'm9=', param({'menfeng': 0}))
         assert h == {'hupai': [{'name': '平和', 'fanshu': 1},
-                               {'name': '純全帯ヤオ九', 'fanshu': 3},
+                               {'name': '純全帯幺九', 'fanshu': 3},
                                {'name': '二盃口', 'fanshu': 3},
                                {'name': '清一色', 'fanshu': 6}],
                      'fu': 30, 'fanshu': 13, 'damanguan': None, 'defen': 48000,
@@ -924,14 +924,14 @@ class TestHuleDefen:
 
     def test_compare_qiduizi_or_erbeiko(self):
         h = hule(Shoupai.from_str('m223344p556677s8'), 's8=', param())
-        assert h == {'hupai': [{'name': '断ヤオ九', 'fanshu': 1},
+        assert h == {'hupai': [{'name': '断幺九', 'fanshu': 1},
                                {'name': '二盃口', 'fanshu': 3}],
                      'fu': 40, 'fanshu': 4, 'damanguan': None, 'defen': 8000,
                      'fenpei': [0, 8000, 0, -8000]}
 
     def test_compare_two_jiangpai(self):
         h = hule(Shoupai.from_str('m2234455p234s234'), 'm3=', param())
-        assert h == {'hupai': [{'name': '断ヤオ九', 'fanshu': 1},
+        assert h == {'hupai': [{'name': '断幺九', 'fanshu': 1},
                                {'name': '一盃口', 'fanshu': 1},
                                {'name': '三色同順', 'fanshu': 2}],
                      'fu': 40, 'fanshu': 4, 'damanguan': None, 'defen': 8000,
@@ -940,7 +940,7 @@ class TestHuleDefen:
     def test_compare_shunzi_or_kezi(self):
         h = hule(Shoupai.from_str('m111222333p8999'), 'p7=', param())
         assert h == {'hupai': [{'name': '一盃口', 'fanshu': 1},
-                               {'name': '純全帯ヤオ九', 'fanshu': 3}],
+                               {'name': '純全帯幺九', 'fanshu': 3}],
                      'fu': 40, 'fanshu': 4, 'damanguan': None, 'defen': 8000,
                      'fenpei': [0, 8000, 0, -8000]}
 
@@ -954,7 +954,7 @@ class TestHuleDefen:
         h = hule(Shoupai.from_str('m111222333p7899'), 'p9=', param())
         assert h == {'hupai': [{'name': '平和', 'fanshu': 1},
                                {'name': '一盃口', 'fanshu': 1},
-                               {'name': '純全帯ヤオ九', 'fanshu': 3}],
+                               {'name': '純全帯幺九', 'fanshu': 3}],
                      'fu': 30, 'fanshu': 5, 'damanguan': None, 'defen': 8000,
                      'fenpei': [0, 8000, 0, -8000]}
 
@@ -993,7 +993,7 @@ class TestRule:
         h = hule(Shoupai.from_str('m22555p234777s78'),
                  's6=',
                  param({'rule': rule({'fulou_duanyaojiu': False})}))
-        assert h == {'hupai': [{'name': '断ヤオ九', 'fanshu': 1}],
+        assert h == {'hupai': [{'name': '断幺九', 'fanshu': 1}],
                      'fu': 40, 'fanshu': 1, 'damanguan': None, 'defen': 1300,
                      'fenpei': [0, 1300, 0, -1300]}
 
@@ -1073,7 +1073,7 @@ class TestRule:
         assert h == {'hupai': [{'name': '立直', 'fanshu': 1},
                                {'name': '門前清自摸和', 'fanshu': 1},
                                {'name': '平和', 'fanshu': 1},
-                               {'name': '断ヤオ九', 'fanshu': 1},
+                               {'name': '断幺九', 'fanshu': 1},
                                {'name': '二盃口', 'fanshu': 3},
                                {'name': '清一色', 'fanshu': 6}],
                      'fu': 20, 'fanshu': 13, 'damanguan': None, 'defen': 24000,
@@ -1096,7 +1096,7 @@ class TestRule:
                  param({'rule': rule({'ceiled_manguan': True})}))
         assert h == {'hupai': [{'name': '門前清自摸和', 'fanshu': 1},
                                {'name': '場風 東', 'fanshu': 1},
-                               {'name': '混全帯ヤオ九', 'fanshu': 2}],
+                               {'name': '混全帯幺九', 'fanshu': 2}],
                      'fu': 30, 'fanshu': 4, 'damanguan': None, 'defen': 8000,
                      'fenpei': [-4000, 8000, -2000, -2000]}
 

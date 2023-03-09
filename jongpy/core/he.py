@@ -51,10 +51,10 @@ class He:
         if d is None:
             raise InvalidOperationError(m)
         # 鳴いた牌が河の牌と一致しない場合、例外を発生する
-        if self._pai[len(self._pai) - 1][0:2] != p:
+        if self._pai[-1][0:2] != p:
             raise InvalidOperationError(m)
         # 河の牌に鳴かれたマークを追加する
-        self._pai[len(self._pai) - 1] += d.group()
+        self._pai[-1] += d.group()
         return self
 
     def find(self, p: str) -> bool:

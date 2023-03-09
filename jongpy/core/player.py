@@ -1,8 +1,8 @@
 """jongpy.core.player"""
 
 import re
-from abc import ABCMeta, abstractclassmethod
-from typing import Callable, Any
+from abc import ABCMeta, abstractmethod
+from typing import Callable
 
 from jongpy.core.shoupai import Shoupai
 from jongpy.core.he import He
@@ -21,30 +21,31 @@ class Player(metaclass=ABCMeta):
     def action(self, msg: dict[str, dict], callback: Callable | None = None):
         """メッセージの処理"""
 
-        self._callback = callback
+        self._callback = callback   # コールバック関数を保存
 
+        # 通知メッセージの種別ごとの第2層のメソッドを呼び出す
         if 'kaiju' in msg:
-            self.kaiju(msg['kaiju'])
+            self.kaiju(msg['kaiju'])    # 開局
         elif 'qipai' in msg:
-            self.qipai(msg['qipai'])
+            self.qipai(msg['qipai'])    # 配牌
         elif 'zimo' in msg:
-            self.zimo(msg['zimo'])
+            self.zimo(msg['zimo'])  # 自摸
         elif 'dapai' in msg:
-            self.dapai(msg['dapai'])
+            self.dapai(msg['dapai'])    # 打牌
         elif 'fulou' in msg:
-            self.fulou(msg['fulou'])
+            self.fulou(msg['fulou'])    # 副露
         elif 'gang' in msg:
-            self.gang(msg['gang'])
+            self.gang(msg['gang'])  # 槓子
         elif 'gangzimo' in msg:
-            self.zimo(msg['gangzimo'], True)
+            self.zimo(msg['gangzimo'], True)    # 槓自摸
         elif 'kaigang' in msg:
-            self.kaigang(msg['kaigang'])
+            self.kaigang(msg['kaigang'])    # 開槓
         elif 'hule' in msg:
-            self.hule(msg['hule'])
+            self.hule(msg['hule'])  # 和了
         elif 'pingju' in msg:
-            self.pingju(msg['pingju'])
+            self.pingju(msg['pingju'])  # 流局
         elif 'jieju' in msg:
-            self.jieju(msg['jieju'])
+            self.jieju(msg['jieju'])    # 終局
 
     @property
     def shoupai(self) -> Shoupai | None:
@@ -66,7 +67,7 @@ class Player(metaclass=ABCMeta):
         """和了牌の一覧"""
         return xiangting(self.shoupai) == 0 and tingpai(self.shoupai) or []
 
-    def kaiju(self, kaiju: dict[str, Any]):
+    def kaiju(self, kaiju: dict):
         """
         開局処理
 
@@ -83,7 +84,7 @@ class Player(metaclass=ABCMeta):
         if self._callback is not None:
             self.action_kaiju(kaiju)
 
-    def qipai(self, qipai: dict[str, Any]):
+    def qipai(self, qipai: dict):
         """
         配牌処理
 
@@ -102,7 +103,7 @@ class Player(metaclass=ABCMeta):
         if self._callback is not None:
             self.action_qipai(qipai)
 
-    def zimo(self, zimo: dict[str, int | str], gangzimo: bool = False):
+    def zimo(self, zimo: dict, gangzimo: bool = False):
         """
         ツモ処理
 
@@ -121,7 +122,7 @@ class Player(metaclass=ABCMeta):
         if self._callback is not None:
             self.action_zimo(zimo, gangzimo)
 
-    def dapai(self, dapai: dict[str, int | str]):
+    def dapai(self, dapai: dict):
         """
         打牌処理
 
@@ -150,7 +151,7 @@ class Player(metaclass=ABCMeta):
             if [p for p in self.hulepai if p == s + str(n)]:
                 self._neng_rong = False
 
-    def fulou(self, fulou: dict[str, int | str]):
+    def fulou(self, fulou: dict):
         """
         副露処理
 
@@ -167,7 +168,7 @@ class Player(metaclass=ABCMeta):
 
         self._diyizimo = False
 
-    def gang(self, gang: dict[str, int | str]):
+    def gang(self, gang: dict):
         """
         槓処理
 
@@ -189,7 +190,7 @@ class Player(metaclass=ABCMeta):
             if [p for p in self.hulepai if p == s + str(n)]:
                 self._neng_rong = False
 
-    def kaigang(self, kaigang: dict[str, str]):
+    def kaigang(self, kaigang: dict):
         """
         開槓処理
 
@@ -200,7 +201,7 @@ class Player(metaclass=ABCMeta):
         """
         self._model.kaigang(kaigang)
 
-    def hule(self, hule: dict[str, Any]):
+    def hule(self, hule: dict):
         """
         和了処理
 
@@ -213,7 +214,7 @@ class Player(metaclass=ABCMeta):
         if self._callback is not None:
             self.action_hule(hule)
 
-    def pingju(self, pingju: dict[str, Any]):
+    def pingju(self, pingju: dict):
         """
         流局処理
 
@@ -273,38 +274,38 @@ class Player(metaclass=ABCMeta):
         """ノーテン宣言可能かどうか"""
         return Game.allow_no_daopai(self._rule, shoupai, self.shan.paishu)
 
-    @ abstractclassmethod
+    @abstractmethod
     def action_kaiju(self, kaiju):
         pass
 
-    @ abstractclassmethod
+    @abstractmethod
     def action_qipai(self, qipai):
         pass
 
-    @ abstractclassmethod
+    @abstractmethod
     def action_zimo(self, zimo, gangzimo):
         pass
 
-    @ abstractclassmethod
+    @abstractmethod
     def action_dapai(self, dapai):
         pass
 
-    @ abstractclassmethod
+    @abstractmethod
     def action_fulou(self, fulou):
         pass
 
-    @ abstractclassmethod
+    @abstractmethod
     def action_gang(self, gang):
         pass
 
-    @ abstractclassmethod
+    @abstractmethod
     def action_hule(self, hule):
         pass
 
-    @ abstractclassmethod
+    @abstractmethod
     def action_pingju(self, pingju):
         pass
 
-    @ abstractclassmethod
+    @abstractmethod
     def action_jieju(self, paipu):
         pass
