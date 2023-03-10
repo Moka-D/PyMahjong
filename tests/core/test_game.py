@@ -2,9 +2,11 @@ import pytest
 import re
 import time
 import asyncio
+import json
 
 import jongpy.core as majiang
 from jongpy.core.exceptions import PaiFormatError
+from jongpy.core import dev
 
 
 SCRIPT = 'script.json'
@@ -126,7 +128,8 @@ def set_reply(game: majiang.Game, reply: list[dict]):
 
 
 def last_paipu(game: majiang.Game, i: int = 0) -> dict:
-    return game._paipu['log'][-1 + i]
+    log = game._paipu['log'][-1]
+    return log[-1 + i]
 
 
 class TestGameInit:
@@ -2443,3 +2446,13 @@ class TestStaticAllowNoDaopai:
     def test_declare_no_tingpai(self, setup):
         shoupai = majiang.Shoupai.from_str('m123p456z1122,s789-')
         assert majiang.Game.allow_no_daopai(self._rule, shoupai, 0)
+
+
+def test_scenario(shared_datadir):
+    with open(shared_datadir / SCRIPT, 'r', encoding="utf-8") as f:
+        script = json.load(f)
+    for paipu in script:
+        print(paipu['title'])
+        game = dev.Game(json.loads(json.dumps(paipu)),
+                        majiang.rule({'rank_bounus': ['20', '10', '-10', '-20']})).do_sync()
+        assert paipu == game._paipu

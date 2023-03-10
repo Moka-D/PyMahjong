@@ -107,7 +107,7 @@ class Game:
         self._handler = callback
 
     def add_paipu(self, paipu: dict):
-        self._paipu['log'].append(paipu)
+        self._paipu['log'][-1].append(paipu)
 
     def set_timeout(self, timeout: int, callback: Callable, *args):
         loop = asyncio.new_event_loop()
@@ -385,6 +385,7 @@ class Game:
 
         # 2. 牌譜を追加する
         self._paipu['defen'] = model['defen'][:]
+        self._paipu['log'].append([])
         paipu = {
             'qipai': {
                 'zhuangfeng': model['zhuangfeng'],  # 場風
@@ -808,7 +809,7 @@ class Game:
                 if self._rule['penalty_no_tingpai'] and 0 < n_tingpai < 4:
                     # ノーテン罰符ありのルールなら清算する
                     for i in range(4):
-                        fenpei[i] = 3000 / n_tingpai if shoupai[i] else -3000 / (4 - n_tingpai)
+                        fenpei[i] = int(3000 / n_tingpai) if shoupai[i] else int(-3000 / (4 - n_tingpai))
 
             # ノーテン連荘の場合、流局は連荘とする
             if self._rule['continuous_zhuang'] == 3:
@@ -929,7 +930,6 @@ class Game:
                 # point[id] = round(point[id])
                 point[id] = float(Decimal(str(point[id])).quantize(Decimal('0'), rounding=ROUND_HALF_UP))
             point[paiming[0]] -= point[id]
-        # self._paipu['point'] = list(map(lambda p: round(p, 0) if round_ else round(p, 1), point))
         self._paipu['point'] = list(map(lambda p: ("{:.0f}" if round_ else "{:.1f}").format(p), point))
 
         # 対局者に通知メッセージを送信する
@@ -1305,7 +1305,7 @@ class Game:
                  else self._dapai) + '_+=-'[(4 + model['lunban'] - i) % 4]
             # 状況役の有無を判定する
             hupai = (model['shoupai'][i].lizhi      # 立直
-                     or self._status == 'gangzimo'  # 嶺上開花
+                     or self._status == 'gang'  # 槍槓
                      or model['shan'].paishu == 0)  # 海底自摸
             # ロン和了可能か判定する
             return Game.allow_hule_(self._rule,
