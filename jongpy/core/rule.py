@@ -3,7 +3,7 @@
 
 def rule(param: dict = {}):
 
-    rule_ = {
+    r = {
         # 点数関連
         'origin_points': 25000,     # 配給原点
         'rank_bounus': ['20.0', '10.0', '-10.0', '-20.0'],  # 順位点
@@ -49,6 +49,6 @@ def rule(param: dict = {}):
     }
 
     for key, value in param.items():
-        rule_[key] = value
+        r[key] = value
 
-    return rule_
+    return r

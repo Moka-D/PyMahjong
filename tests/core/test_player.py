@@ -1,9 +1,23 @@
 import pytest
 
-import jongpy.core as jongpy
+import jongpy.core as majiang
 
 
-class Player(jongpy.Player):
+called = 0
+
+
+@pytest.fixture(autouse=True)
+def initialize_called():
+    global called
+    called = 0
+
+
+def done():
+    global called
+    called = 1
+
+
+class Player(majiang.Player):
     def __init__(self) -> None:
         super().__init__()
 
@@ -13,7 +27,7 @@ class Player(jongpy.Player):
     def action_qipai(self, qipai):
         self._callback()
 
-    def action_zimo(self, zimo):
+    def action_zimo(self, zimo, gangzimo):
         self._callback()
 
     def action_dapai(self, dapai):
@@ -41,7 +55,7 @@ def init_player(param: dict = {}):
 
     kaiju = {
         'id': 1,
-        'rule': jongpy.rule(),
+        'rule': majiang.rule(),
         'title': 'タイトル',
         'player': ['自家', '下家', '対面', '上家'],
         'qijia': 1
@@ -78,7 +92,7 @@ class TestPlayerInit:
 
     def test_error_abstract_class(self):
         with pytest.raises(TypeError):
-            jongpy.Player()
+            majiang.Player()
 
     def test_instance(self, setup):
         assert self._player
@@ -90,19 +104,19 @@ class TestPlayerInit:
 class TestPlayerKaiju:
     def test_initial_value(self):
         player = Player()
-        kaiju = {'id': 1, 'rule': jongpy.rule(), 'title': 'タイトル',
+        kaiju = {'id': 1, 'rule': majiang.rule(), 'title': 'タイトル',
                  'player': ['自家', '下家', '対面', '上家']}
         player.kaiju(kaiju)
 
         assert player._id == 1
-        assert player._rule == jongpy.rule()
+        assert player._rule == majiang.rule()
         assert player._model.title == 'タイトル'
 
 
 class TestPlayerQipai:
     def test_initial_value(self):
         player = Player()
-        kaiju = {'id': 1, 'rule': jongpy.rule(), 'title': 'タイトル',
+        kaiju = {'id': 1, 'rule': majiang.rule(), 'title': 'タイトル',
                  'player': ['自家', '下家', '対面', '上家'], 'qijia': 2}
         player.kaiju(kaiju)
 
@@ -258,31 +272,31 @@ class TestPlayerJieju:
 class TestPlayerGetDapai:
     def test_no_change(self):
         player = init_player()
-        shoupai = jongpy.Shoupai.from_str('m14p45677s6788,m234-,')
+        shoupai = majiang.Shoupai.from_str('m14p45677s6788,m234-,')
         assert player.get_dapai(shoupai) == ['p4', 'p5', 'p6', 'p7', 's6', 's7', 's8']
 
     def test_ok_change(self):
-        player = init_player({'rule': jongpy.rule({'allow_fulou_slide': 1})})
-        shoupai = jongpy.Shoupai.from_str('m14p45677s6788,m234-,')
+        player = init_player({'rule': majiang.rule({'allow_fulou_slide': 1})})
+        shoupai = majiang.Shoupai.from_str('m14p45677s6788,m234-,')
         assert player.get_dapai(shoupai) == ['m1', 'p4', 'p5', 'p6', 'p7', 's6', 's7', 's8']
 
 
 class TestPlayerGetChiMianzi:
     def test_no_change(self):
         player = init_player()
-        shoupai = jongpy.Shoupai.from_str('p1112344,z111=,z222+')
+        shoupai = majiang.Shoupai.from_str('p1112344,z111=,z222+')
         assert player.get_chi_mianzi(shoupai, 'p4-') == []
 
     def test_ok_change(self):
-        player = init_player({'rule': jongpy.rule({'allow_fulou_slide': 1})})
-        shoupai = jongpy.Shoupai.from_str('p1112344,z111=,z222+')
+        player = init_player({'rule': majiang.rule({'allow_fulou_slide': 1})})
+        shoupai = majiang.Shoupai.from_str('p1112344,z111=,z222+')
         assert player.get_chi_mianzi(shoupai, 'p4-') == ['p234-']
 
     def test_ng_haidi(self):
         player = init_player()
         while player.shan.paishu:
             player.shan.zimo()
-        shoupai = jongpy.Shoupai.from_str('m23p456s789z11123')
+        shoupai = majiang.Shoupai.from_str('m23p456s789z11123')
         assert player.get_chi_mianzi(shoupai, 'm1-') == []
 
 
@@ -292,13 +306,13 @@ class TestPlayerGetPengMianzi:
         self._player = init_player()
 
     def test_ok(self, setup):
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z1123')
+        shoupai = majiang.Shoupai.from_str('m123p456s789z1123')
         assert self._player.get_peng_mianzi(shoupai, 'z1+') == ['z111+']
 
     def test_ng_haidi(self, setup):
         while self._player.shan.paishu:
             self._player.shan.zimo()
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z1123')
+        shoupai = majiang.Shoupai.from_str('m123p456s789z1123')
         assert self._player.get_chi_mianzi(shoupai, 'z1+') == []
 
 
@@ -308,31 +322,31 @@ class TestPlayerGetGangMianzi:
         self._player = init_player()
 
     def test_angang(self, setup):
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z11112')
+        shoupai = majiang.Shoupai.from_str('m123p456s789z11112')
         assert self._player.get_gang_mianzi(shoupai) == ['z1111']
 
     def test_daimingang(self, setup):
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z1112')
+        shoupai = majiang.Shoupai.from_str('m123p456s789z1112')
         assert self._player.get_gang_mianzi(shoupai, 'z1=') == ['z1111=']
 
     def test_ng_haidi(self, setup):
         while self._player.shan.paishu:
             self._player.shan.zimo()
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z11112')
+        shoupai = majiang.Shoupai.from_str('m123p456s789z11112')
         assert self._player.get_gang_mianzi(shoupai) == []
 
     def test_ng_5th_gang(self, setup):
         self._player._n_gang = 4
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z11112')
+        shoupai = majiang.Shoupai.from_str('m123p456s789z11112')
         assert self._player.get_gang_mianzi(shoupai) == []
 
     def test_ok_angang_after_lizhi(self, setup):
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z1112z1*')
+        shoupai = majiang.Shoupai.from_str('m123p456s789z1112z1*')
         assert self._player.get_gang_mianzi(shoupai) == ['z1111']
 
     def test_ng_angang_after_lizhi(self):
-        player = init_player({'rule': jongpy.rule({'allow_angang_after_lizhi': 0})})
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z1112z1*')
+        player = init_player({'rule': majiang.rule({'allow_angang_after_lizhi': 0})})
+        shoupai = majiang.Shoupai.from_str('m123p456s789z1112z1*')
         assert player.get_gang_mianzi(shoupai) == []
 
 
@@ -340,7 +354,7 @@ class TestPlayerAllowLizhi:
     @pytest.fixture
     def setup(self):
         self._player = init_player()
-        self._shoupai = jongpy.Shoupai.from_str('m223p456s789z11122')
+        self._shoupai = majiang.Shoupai.from_str('m223p456s789z11122')
 
     def test_get_ok_list(self, setup):
         assert self._player.allow_lizhi(self._shoupai) == ['m2', 'm3']
@@ -354,7 +368,7 @@ class TestPlayerAllowLizhi:
         assert not self._player.allow_lizhi(self._shoupai)
 
     def test_ok_no_lizhi(self, setup):
-        player = init_player({'rule': jongpy.rule({'lizhi_no_zimo': True})})
+        player = init_player({'rule': majiang.rule({'lizhi_no_zimo': True})})
         while player.shan.paishu >= 4:
             player.shan.zimo()
         assert self._player.allow_lizhi(self._shoupai)
@@ -364,7 +378,7 @@ class TestPlayerAllowLizhi:
         assert not self._player.allow_lizhi(self._shoupai)
 
     def test_disable_minus_interruption(self, setup):
-        player = init_player({'rule': jongpy.rule({'minus_interruption': False})})
+        player = init_player({'rule': majiang.rule({'minus_interruption': False})})
         player._model.defen[player._id] = 900
         assert player.allow_lizhi(self._shoupai)
 
@@ -373,13 +387,13 @@ class TestPlayerAllowHule:
     @pytest.fixture
     def setup(self):
         self._player = init_player()
-        self._shoupai = jongpy.Shoupai.from_str('m123p456s789z1122')
+        self._shoupai = majiang.Shoupai.from_str('m123p456s789z1122')
 
     def test_no_hule(self, setup):
         assert not self._player.allow_hule(self._shoupai, 'z2=')
 
     def test_lizhi(self, setup):
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z1122*')
+        shoupai = majiang.Shoupai.from_str('m123p456s789z1122*')
         assert self._player.allow_hule(shoupai, 'z2=')
 
     def test_haidi(self, setup):
@@ -398,46 +412,46 @@ class TestPlayerAllowHule:
 class TestPlayerAllowPingju:
     def test_9shu_9pai(self):
         player = init_player()
-        shouapi = jongpy.Shoupai.from_str('m1234569z1234567')
+        shouapi = majiang.Shoupai.from_str('m1234569z1234567')
         assert player.allow_pingju(shouapi)
 
     def test_ng_after_diyizimo(self):
         player = init_player()
         player._diyizimo = False
-        shouapi = jongpy.Shoupai.from_str('m123459z1234567')
+        shouapi = majiang.Shoupai.from_str('m123459z1234567')
         assert not player.allow_pingju(shouapi)
 
     def test_disable_interrupted_pingju(self):
-        player = init_player({'rule': jongpy.rule({'interrupted_pingju': False})})
-        shoupai = jongpy.Shoupai.from_str('m123459z1234567')
+        player = init_player({'rule': majiang.rule({'interrupted_pingju': False})})
+        shoupai = majiang.Shoupai.from_str('m123459z1234567')
         assert not player.allow_pingju(shoupai)
 
 
 class TestPlayerAllowNoDaopai:
     def test_ok_declare_no_tingpai(self):
-        player = init_player({'rule': jongpy.rule({'declare_no_tingpai': True})})
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z1122')
+        player = init_player({'rule': majiang.rule({'declare_no_tingpai': True})})
+        shoupai = majiang.Shoupai.from_str('m123p456s789z1122')
         while player.shan.paishu:
             player.shan.zimo()
         assert player.allow_no_daopai(shoupai)
 
     def test_diable_declare_no_tingpai(self):
         player = init_player()
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z1122')
+        shoupai = majiang.Shoupai.from_str('m123p456s789z1122')
         while player.shan.paishu:
             player.shan.zimo()
         assert not player.allow_no_daopai(shoupai)
 
     def test_no_tingpai(self):
-        player = init_player({'rule': jongpy.rule({'declare_no_tingpai': True})})
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z1123')
+        player = init_player({'rule': majiang.rule({'declare_no_tingpai': True})})
+        shoupai = majiang.Shoupai.from_str('m123p456s789z1123')
         while player.shan.paishu:
             player.shan.zimo()
         assert not player.allow_no_daopai(shoupai)
 
     def test_no_pingju(self):
-        player = init_player({'rule': jongpy.rule({'declare_no_tingpai': True})})
-        shoupai = jongpy.Shoupai.from_str('m123p456s789z1122')
+        player = init_player({'rule': majiang.rule({'declare_no_tingpai': True})})
+        shoupai = majiang.Shoupai.from_str('m123p456s789z1122')
         assert not player.allow_no_daopai(shoupai)
 
 
@@ -446,7 +460,7 @@ class TestPlayerAction:
     def setup(self):
         self._player = Player()
         self._kaiju = {'kaiju': {
-            'id': 1, 'rule': jongpy.rule(), 'title': 'タイトル',
+            'id': 1, 'rule': majiang.rule(), 'title': 'タイトル',
             'player': ['自家', '下家', '対面', '上家'], 'qijia': 2
         }}
         self._qipai = {'qipai': {
@@ -456,38 +470,51 @@ class TestPlayerAction:
         }}
 
     def test_kaiju(self, setup):
-        self._player.action(self._kaiju)
+        self._player.action(self._kaiju, done)
+        assert called == 1
 
     def test_qipai(self, setup):
         self._player.action(self._kaiju)
-        self._player.action(self._qipai)
+        self._player.action(self._qipai, done)
+        assert called == 1
 
     def test_zimo(self, setup):
         self._player.action(self._kaiju)
         self._player.action(self._qipai)
-        self._player.action({'zimo': {'l': 0, 'p': 'm1'}})
+        self._player.action({'zimo': {'l': 0, 'p': 'm1'}}, done)
+        assert called == 1
 
     def test_dapai(self, setup):
         self._player.action(self._kaiju)
         self._player.action(self._qipai)
-        self._player.action({'dapai': {'l': 0, 'p': 'm1'}})
+        self._player.action({'dapai': {'l': 0, 'p': 'm1'}}, done)
+        assert called == 1
 
     def test_fulou(self, setup):
         self._player.action(self._kaiju)
         self._player.action(self._qipai)
         self._player.action({'dapai': {'l': 0, 'p': 'm1'}})
-        self._player.action({'fulou': {'l': 1, 'm': 'm1-23'}})
+        self._player.action({'fulou': {'l': 1, 'm': 'm1-23'}}, done)
+        assert called == 1
 
     def test_gang(self, setup):
         self._player.action(self._kaiju)
         self._player.action(self._qipai)
-        self._player.action({'gang': {'l': 2, 'm': 's1111'}})
+        self._player.action({'gang': {'l': 2, 'm': 's1111'}}, done)
+        assert called == 1
 
     def test_gangzimo(self, setup):
         self._player.action(self._kaiju)
         self._player.action(self._qipai)
         self._player.action({'gang': {'l': 2, 'm': 's1111'}})
-        self._player.action({'gangzimo': {'l': 2, 'p': 's2'}})
+        self._player.action({'gangzimo': {'l': 2, 'p': 's2'}}, done)
+        assert called == 1
+
+    def test_kaigang(self, setup):
+        self._player.action(self._kaiju)
+        self._player.action(self._qipai)
+        self._player.action({'gang': {'l': 2, 'm': 's1111'}})
+        self._player.action({'kaigang': {'baopai': 'm1'}})
 
     def test_hule(self, setup):
         self._player.action(self._kaiju)
@@ -502,7 +529,8 @@ class TestPlayerAction:
             'hupai': [{'name': '大四喜', 'fanshu': '**', 'baojia': 0}],
             'fenpai': [-32000, 0, 64000, -32000]
         }}
-        self._player.action(hule)
+        self._player.action(hule, done)
+        assert called == 1
 
     def test_pingju(self, setup):
         self._player.action(self._kaiju)
@@ -512,9 +540,11 @@ class TestPlayerAction:
             'shoupai': ['', 'p2234406z333555', '', 'p11223346777z77'],
             'fenpai': [-1500, 1500, -1500, 1500]
         }}
-        self._player.action(pingju)
+        self._player.action(pingju, done)
+        assert called == 1
 
     def test_jieju(self, setup):
         self._player.action(self._kaiju)
         self._player.action(self._qipai)
-        self._player.action({'jieju': {'defen': [None, None, None, None]}})
+        self._player.action({'jieju': {'defen': [None, None, None, None]}}, done)
+        assert called == 1

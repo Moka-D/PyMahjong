@@ -226,7 +226,7 @@ class Shoupai:
 
         return paistr
 
-    def __copy__(self):
+    def clone(self):
 
         # 空のインスタンスを生成
         shoupai = Shoupai()

@@ -1,5 +1,4 @@
 import pytest
-import copy
 
 from jongpy.core import Shoupai
 from jongpy.core.exceptions import (PaiFormatError,
@@ -260,61 +259,61 @@ class TestShoupaiFromString:
         assert str(Shoupai.from_str('p456s789z1,m12-3,p999=,')) == 'p456s789z1,m12-3,p999=,'
 
 
-class TestShoupaiCopy:
+class TestShoupaiClone:
 
-    def test_copy(self):
+    def test_clone(self):
         shoupai = Shoupai()
-        assert shoupai != copy.copy(shoupai)
+        assert shoupai != shoupai.clone()
 
-    def test_copy_shoupai(self):
+    def test_clone_shoupai(self):
         shoupai = Shoupai.from_str('m123p456s789z4567')
-        assert str(shoupai) == str(copy.copy(shoupai))
+        assert str(shoupai) == str(shoupai.clone())
 
-    def test_copy_fulou(self):
+    def test_clone_fulou(self):
         shoupai = Shoupai.from_str('m1,p123-,s555=,z777+7,m9999')
-        assert str(shoupai) == str(copy.copy(shoupai))
+        assert str(shoupai) == str(shoupai.clone())
 
-    def test_copy_zimo(self):
+    def test_clone_zimo(self):
         shoupai = Shoupai.from_str('m11123456789991')
-        assert str(shoupai) == str(copy.copy(shoupai))
+        assert str(shoupai) == str(shoupai.clone())
 
-    def test_copy_lizhi(self):
+    def test_clone_lizhi(self):
         shoupai = Shoupai.from_str('m123p456s789z1112*')
-        assert str(shoupai) == str(copy.copy(shoupai))
+        assert str(shoupai) == str(shoupai.clone())
 
-    def test_copy_hidden(self):
+    def test_clone_hidden(self):
         shoupai = Shoupai.from_str('___________,m123-')
-        assert str(shoupai) == str(copy.copy(shoupai))
+        assert str(shoupai) == str(shoupai.clone())
 
     def test_not_share_zimo(self):
         shoupai = Shoupai.from_str('m123p456s789z4567')
-        copied = copy.copy(shoupai)
-        copied.zimo('m1')
-        assert str(shoupai) != str(copied)
+        cloned = shoupai.clone()
+        cloned.zimo('m1')
+        assert str(shoupai) != str(cloned)
 
     def test_not_share_dapai(self):
         shoupai = Shoupai.from_str('m123p456s789z34567')
-        copied = copy.copy(shoupai)
-        copied.dapai('m1')
-        assert str(shoupai) != str(copied)
+        cloned = shoupai.clone()
+        cloned.dapai('m1')
+        assert str(shoupai) != str(cloned)
 
     def test_not_share_fulou(self):
         shoupai = Shoupai.from_str('m123p456s789z1167')
-        copied = copy.copy(shoupai)
-        copied.fulou('z111=')
-        assert str(shoupai) != str(copied)
+        cloned = shoupai.clone()
+        cloned.fulou('z111=')
+        assert str(shoupai) != str(cloned)
 
     def test_not_share_gang(self):
         shoupai = Shoupai.from_str('m123p456s789z11112')
-        copied = copy.copy(shoupai)
-        copied.gang('z1111')
-        assert str(shoupai) != str(copied)
+        cloned = shoupai.clone()
+        cloned.gang('z1111')
+        assert str(shoupai) != str(cloned)
 
     def test_not_share_lizhi(self):
         shoupai = Shoupai.from_str('m123p456s789z11223')
-        copied = copy.copy(shoupai)
-        copied.dapai('z3*')
-        assert str(shoupai) != str(copied)
+        cloned = shoupai.clone()
+        cloned.dapai('z3*')
+        assert str(shoupai) != str(cloned)
 
 
 class TestShoupaiUpdate:
